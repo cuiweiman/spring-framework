@@ -16,14 +16,29 @@
 
 package org.springframework.beans.factory;
 
-import java.lang.annotation.Annotation;
-import java.util.Map;
-
 import org.springframework.beans.BeansException;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 
+import java.lang.annotation.Annotation;
+import java.util.Map;
+
 /**
+ * BeanFactory接口的扩展，可以枚举全部的 Bean示例，而不是在客户端根据名称一个个的尝试查找。
+ * <p>
+ * BeanFactory实现类预加载 Bean definitions（例如：基于XML的工厂） 时可以实现本接口。
+ * <p>
+ * 这个接口中的方法只会考虑本factory定义的bean.会忽略{@code ConfigurableBeanFactory#registerSingleton}
+ * 方法注册的单例bean。不过{@code getBeanNamesForType}和 {@code getBeansOfType}例外，它们一样会考虑手动注册的单例。
+ * 当然{@code BeanFactory#getBean}一样可以透明访问这些特殊bean.
+ * 然而在特殊情况下,所有的bean都是由external bean定义,所以应用不需要顾虑这些差别.
+ * <p>
+ * 这个工厂接口扩展了BeanFactory的功能，作为上文指出的BeanFactory二级接口，有9个独有的方法，
+ * 扩展了跟BeanDefinition的功能，提供了BeanDefinition、BeanName、注解有关的各种操作。
+ * 它可以根据条件返回Bean的集合，这就是它名字的由来——ListableBeanFactory
+ * <p>
+ * （BeanFactory：Spring中的IOC容器；FactoryBean：利用BeanDefinition构建Bean的工厂。）
+ * <p>
  * Extension of the {@link BeanFactory} interface to be implemented by bean factories
  * that can enumerate all their bean instances, rather than attempting bean lookup
  * by name one by one as requested by clients. BeanFactory implementations that
@@ -51,17 +66,20 @@ import org.springframework.lang.Nullable;
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
- * @since 16 April 2001
  * @see HierarchicalBeanFactory
  * @see BeanFactoryUtils
+ * @since 16 April 2001
  */
 public interface ListableBeanFactory extends BeanFactory {
 
 	/**
+	 * 校验 BeanFactory 中是否包含 给定 Bean 的 BeanDefinition
+	 * <p>
 	 * Check if this bean factory contains a bean definition with the given name.
 	 * <p>Does not consider any hierarchy this factory may participate in,
 	 * and ignores any singleton beans that have been registered by
 	 * other means than bean definitions.
+	 *
 	 * @param beanName the name of the bean to look for
 	 * @return if this bean factory contains a bean definition with the given name
 	 * @see #containsBean
@@ -69,25 +87,34 @@ public interface ListableBeanFactory extends BeanFactory {
 	boolean containsBeanDefinition(String beanName);
 
 	/**
+	 * 返回 BeanFactory 中 BeanDefinition 的数量
+	 * <p>
 	 * Return the number of beans defined in the factory.
 	 * <p>Does not consider any hierarchy this factory may participate in,
 	 * and ignores any singleton beans that have been registered by
 	 * other means than bean definitions.
+	 *
 	 * @return the number of beans defined in the factory
 	 */
 	int getBeanDefinitionCount();
 
 	/**
+	 * 返回 定义在 BeanFactory 中 Bean实例 的名称。
+	 * 可以先获取到 BeanFactory 中所有的 BeanName，然后就可以根据BeanName获取到所有的Bean实例。
+	 * <p>
 	 * Return the names of all beans defined in this factory.
 	 * <p>Does not consider any hierarchy this factory may participate in,
 	 * and ignores any singleton beans that have been registered by
 	 * other means than bean definitions.
+	 *
 	 * @return the names of all beans defined in this factory,
 	 * or an empty array if none defined
 	 */
 	String[] getBeanDefinitionNames();
 
 	/**
+	 * 返回符合 指定类型（ResolvableType） 的 Bean名称。
+	 * <p>
 	 * Return the names of beans matching the given type (including subclasses),
 	 * judging from either bean definitions or the value of {@code getObjectType}
 	 * in the case of FactoryBeans.
@@ -106,17 +133,20 @@ public interface ListableBeanFactory extends BeanFactory {
 	 * result will be the same as for {@code getBeanNamesForType(type, true, true)}.
 	 * <p>Bean names returned by this method should always return bean names <i>in the
 	 * order of definition</i> in the backend configuration, as far as possible.
+	 *
 	 * @param type the generically typed class or interface to match
 	 * @return the names of beans (or objects created by FactoryBeans) matching
 	 * the given object type (including subclasses), or an empty array if none
-	 * @since 4.2
 	 * @see #isTypeMatch(String, ResolvableType)
 	 * @see FactoryBean#getObjectType
 	 * @see BeanFactoryUtils#beanNamesForTypeIncludingAncestors(ListableBeanFactory, ResolvableType)
+	 * @since 4.2
 	 */
 	String[] getBeanNamesForType(ResolvableType type);
 
 	/**
+	 * 根据指定类型（包括子类）获取其对应的所有 Bean名称。
+	 * <p>
 	 * Return the names of beans matching the given type (including subclasses),
 	 * judging from either bean definitions or the value of {@code getObjectType}
 	 * in the case of FactoryBeans.
@@ -134,23 +164,27 @@ public interface ListableBeanFactory extends BeanFactory {
 	 * by other means than bean definitions.
 	 * <p>Bean names returned by this method should always return bean names <i>in the
 	 * order of definition</i> in the backend configuration, as far as possible.
-	 * @param type the generically typed class or interface to match
+	 *
+	 * @param type                 the generically typed class or interface to match
 	 * @param includeNonSingletons whether to include prototype or scoped beans too
-	 * or just singletons (also applies to FactoryBeans)
-	 * @param allowEagerInit whether to initialize <i>lazy-init singletons</i> and
-	 * <i>objects created by FactoryBeans</i> (or by factory methods with a
-	 * "factory-bean" reference) for the type check. Note that FactoryBeans need to be
-	 * eagerly initialized to determine their type: So be aware that passing in "true"
-	 * for this flag will initialize FactoryBeans and "factory-bean" references.
+	 *                             or just singletons (also applies to FactoryBeans)。
+	 *                             是否包含 原型或范围内的Bean，或者只获取单例Bean（也涉及 FactoryBeans）
+	 * @param allowEagerInit       whether to initialize <i>lazy-init singletons</i> and
+	 *                             <i>objects created by FactoryBeans</i> (or by factory methods with a
+	 *                             "factory-bean" reference) for the type check. Note that FactoryBeans need to be
+	 *                             eagerly initialized to determine their type: So be aware that passing in "true"
+	 *                             for this flag will initialize FactoryBeans and "factory-bean" references.
 	 * @return the names of beans (or objects created by FactoryBeans) matching
 	 * the given object type (including subclasses), or an empty array if none
-	 * @since 5.2
 	 * @see FactoryBean#getObjectType
 	 * @see BeanFactoryUtils#beanNamesForTypeIncludingAncestors(ListableBeanFactory, ResolvableType, boolean, boolean)
+	 * @since 5.2
 	 */
 	String[] getBeanNamesForType(ResolvableType type, boolean includeNonSingletons, boolean allowEagerInit);
 
 	/**
+	 * 根据指定类型（包括子类）获取其对应的所有 Bean名称。
+	 * <p>
 	 * Return the names of beans matching the given type (including subclasses),
 	 * judging from either bean definitions or the value of {@code getObjectType}
 	 * in the case of FactoryBeans.
@@ -169,6 +203,7 @@ public interface ListableBeanFactory extends BeanFactory {
 	 * result will be the same as for {@code getBeanNamesForType(type, true, true)}.
 	 * <p>Bean names returned by this method should always return bean names <i>in the
 	 * order of definition</i> in the backend configuration, as far as possible.
+	 *
 	 * @param type the class or interface to match, or {@code null} for all bean names
 	 * @return the names of beans (or objects created by FactoryBeans) matching
 	 * the given object type (including subclasses), or an empty array if none
@@ -178,6 +213,8 @@ public interface ListableBeanFactory extends BeanFactory {
 	String[] getBeanNamesForType(@Nullable Class<?> type);
 
 	/**
+	 * 根据指定类型（包括子类）获取其对应的所有 Bean名称。
+	 * <p>
 	 * Return the names of beans matching the given type (including subclasses),
 	 * judging from either bean definitions or the value of {@code getObjectType}
 	 * in the case of FactoryBeans.
@@ -195,14 +232,15 @@ public interface ListableBeanFactory extends BeanFactory {
 	 * by other means than bean definitions.
 	 * <p>Bean names returned by this method should always return bean names <i>in the
 	 * order of definition</i> in the backend configuration, as far as possible.
-	 * @param type the class or interface to match, or {@code null} for all bean names
+	 *
+	 * @param type                 the class or interface to match, or {@code null} for all bean names
 	 * @param includeNonSingletons whether to include prototype or scoped beans too
-	 * or just singletons (also applies to FactoryBeans)
-	 * @param allowEagerInit whether to initialize <i>lazy-init singletons</i> and
-	 * <i>objects created by FactoryBeans</i> (or by factory methods with a
-	 * "factory-bean" reference) for the type check. Note that FactoryBeans need to be
-	 * eagerly initialized to determine their type: So be aware that passing in "true"
-	 * for this flag will initialize FactoryBeans and "factory-bean" references.
+	 *                             or just singletons (also applies to FactoryBeans)
+	 * @param allowEagerInit       whether to initialize <i>lazy-init singletons</i> and
+	 *                             <i>objects created by FactoryBeans</i> (or by factory methods with a
+	 *                             "factory-bean" reference) for the type check. Note that FactoryBeans need to be
+	 *                             eagerly initialized to determine their type: So be aware that passing in "true"
+	 *                             for this flag will initialize FactoryBeans and "factory-bean" references.
 	 * @return the names of beans (or objects created by FactoryBeans) matching
 	 * the given object type (including subclasses), or an empty array if none
 	 * @see FactoryBean#getObjectType
@@ -211,6 +249,8 @@ public interface ListableBeanFactory extends BeanFactory {
 	String[] getBeanNamesForType(@Nullable Class<?> type, boolean includeNonSingletons, boolean allowEagerInit);
 
 	/**
+	 * 根据类型（包括子类）返回匹配的 BeanName 和 Bean的Map
+	 * <p>
 	 * Return the bean instances that match the given object type (including
 	 * subclasses), judging from either bean definitions or the value of
 	 * {@code getObjectType} in the case of FactoryBeans.
@@ -230,17 +270,20 @@ public interface ListableBeanFactory extends BeanFactory {
 	 * <p>The Map returned by this method should always return bean names and
 	 * corresponding bean instances <i>in the order of definition</i> in the
 	 * backend configuration, as far as possible.
+	 *
 	 * @param type the class or interface to match, or {@code null} for all concrete beans
 	 * @return a Map with the matching beans, containing the bean names as
 	 * keys and the corresponding bean instances as values
 	 * @throws BeansException if a bean could not be created
-	 * @since 1.1.2
 	 * @see FactoryBean#getObjectType
 	 * @see BeanFactoryUtils#beansOfTypeIncludingAncestors(ListableBeanFactory, Class)
+	 * @since 1.1.2
 	 */
 	<T> Map<String, T> getBeansOfType(@Nullable Class<T> type) throws BeansException;
 
 	/**
+	 * 根据类型（包括子类）返回匹配的 BeanName 和 Bean的Map
+	 * <p>
 	 * Return the bean instances that match the given object type (including
 	 * subclasses), judging from either bean definitions or the value of
 	 * {@code getObjectType} in the case of FactoryBeans.
@@ -259,14 +302,15 @@ public interface ListableBeanFactory extends BeanFactory {
 	 * <p>The Map returned by this method should always return bean names and
 	 * corresponding bean instances <i>in the order of definition</i> in the
 	 * backend configuration, as far as possible.
-	 * @param type the class or interface to match, or {@code null} for all concrete beans
+	 *
+	 * @param type                 the class or interface to match, or {@code null} for all concrete beans
 	 * @param includeNonSingletons whether to include prototype or scoped beans too
-	 * or just singletons (also applies to FactoryBeans)
-	 * @param allowEagerInit whether to initialize <i>lazy-init singletons</i> and
-	 * <i>objects created by FactoryBeans</i> (or by factory methods with a
-	 * "factory-bean" reference) for the type check. Note that FactoryBeans need to be
-	 * eagerly initialized to determine their type: So be aware that passing in "true"
-	 * for this flag will initialize FactoryBeans and "factory-bean" references.
+	 *                             or just singletons (also applies to FactoryBeans)
+	 * @param allowEagerInit       whether to initialize <i>lazy-init singletons</i> and
+	 *                             <i>objects created by FactoryBeans</i> (or by factory methods with a
+	 *                             "factory-bean" reference) for the type check. Note that FactoryBeans need to be
+	 *                             eagerly initialized to determine their type: So be aware that passing in "true"
+	 *                             for this flag will initialize FactoryBeans and "factory-bean" references.
 	 * @return a Map with the matching beans, containing the bean names as
 	 * keys and the corresponding bean instances as values
 	 * @throws BeansException if a bean could not be created
@@ -277,45 +321,54 @@ public interface ListableBeanFactory extends BeanFactory {
 			throws BeansException;
 
 	/**
+	 * 根据注解类型，查找 BeanName
+	 * <p>
 	 * Find all names of beans which are annotated with the supplied {@link Annotation}
 	 * type, without creating corresponding bean instances yet.
 	 * <p>Note that this method considers objects created by FactoryBeans, which means
 	 * that FactoryBeans will get initialized in order to determine their object type.
+	 *
 	 * @param annotationType the type of annotation to look for
-	 * (at class, interface or factory method level of the specified bean)
+	 *                       (at class, interface or factory method level of the specified bean)
 	 * @return the names of all matching beans
-	 * @since 4.0
 	 * @see #findAnnotationOnBean
+	 * @since 4.0
 	 */
 	String[] getBeanNamesForAnnotation(Class<? extends Annotation> annotationType);
 
 	/**
+	 * 根据注解类型，返回匹配的 BeanName 和 Bean实例 映射关系
+	 * <p>
 	 * Find all beans which are annotated with the supplied {@link Annotation} type,
 	 * returning a Map of bean names with corresponding bean instances.
 	 * <p>Note that this method considers objects created by FactoryBeans, which means
 	 * that FactoryBeans will get initialized in order to determine their object type.
+	 *
 	 * @param annotationType the type of annotation to look for
-	 * (at class, interface or factory method level of the specified bean)
+	 *                       (at class, interface or factory method level of the specified bean)
 	 * @return a Map with the matching beans, containing the bean names as
 	 * keys and the corresponding bean instances as values
 	 * @throws BeansException if a bean could not be created
-	 * @since 3.0
 	 * @see #findAnnotationOnBean
+	 * @since 3.0
 	 */
 	Map<String, Object> getBeansWithAnnotation(Class<? extends Annotation> annotationType) throws BeansException;
 
 	/**
+	 * 查找 给定 BeanName 中 AnnotationType类型的 注解（Annotation）
+	 * <p>
 	 * Find an {@link Annotation} of {@code annotationType} on the specified bean,
 	 * traversing its interfaces and super classes if no annotation can be found on
 	 * the given class itself, as well as checking the bean's factory method (if any).
-	 * @param beanName the name of the bean to look for annotations on
+	 *
+	 * @param beanName       the name of the bean to look for annotations on
 	 * @param annotationType the type of annotation to look for
-	 * (at class, interface or factory method level of the specified bean)
+	 *                       (at class, interface or factory method level of the specified bean)
 	 * @return the annotation of the given type if found, or {@code null} otherwise
 	 * @throws NoSuchBeanDefinitionException if there is no bean with the given name
-	 * @since 3.0
 	 * @see #getBeanNamesForAnnotation
 	 * @see #getBeansWithAnnotation
+	 * @since 3.0
 	 */
 	@Nullable
 	<A extends Annotation> A findAnnotationOnBean(String beanName, Class<A> annotationType)

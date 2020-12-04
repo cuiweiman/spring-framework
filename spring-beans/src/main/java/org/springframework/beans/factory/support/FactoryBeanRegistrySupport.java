@@ -87,7 +87,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	}
 
 	/**
-	 * 获取 FactoryBean 对象实例
+	 * 从 FactoryBean对象缓存池 中 获取 FactoryBean 对象实例
 	 * <p>
 	 * Obtain an object to expose from the given FactoryBean, if available
 	 * in cached form. Quick check for minimal synchronization.
