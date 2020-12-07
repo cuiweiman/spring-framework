@@ -75,6 +75,8 @@ public abstract class BeanFactoryUtils {
 	}
 
 	/**
+	 * 去除工厂 解引用 的前缀，（如果发现有重复的，也去除），返回 真实的 BeanName。
+	 * <p>
 	 * Return the actual bean name, stripping out the factory dereference
 	 * prefix (if any, also stripping repeated factory prefixes if found).
 	 *
