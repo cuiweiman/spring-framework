@@ -40,6 +40,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
 /**
+ * 继承  AbstractBeanFactory 抽象类，并对 AutowireCapableBeanFactory 接口进行实现。
+ * <p>
  * Abstract bean factory superclass that implements default bean creation,
  * with the full capabilities specified by the {@link RootBeanDefinition} class.
  * Implements the {@link org.springframework.beans.factory.config.AutowireCapableBeanFactory}
