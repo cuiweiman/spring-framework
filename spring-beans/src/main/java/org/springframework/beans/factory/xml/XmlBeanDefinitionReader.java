@@ -41,6 +41,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
+ * XML Bean定义格式的 读取器。主要是用 reader属性 对资源文件进行读取和注册。
+ * <p>
  * Bean definition reader for XML bean definitions.
  * Delegates the actual XML document reading to an implementation
  * of the {@link BeanDefinitionDocumentReader} interface.
