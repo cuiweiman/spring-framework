@@ -43,8 +43,13 @@ import java.util.Set;
 /**
  * XML Bean定义格式的 读取器。主要是用 reader属性 对资源文件进行读取和注册。
  * <p>
+ * 通过继承自 {@link AbstractBeanDefinitionReader}  的方法，使用 {@link ResourceLoader} 将资源文件路径转化为对应的 Resource 文件；
+ * 通过 {@link DocumentLoader} 对 Resource 文件进行转换，将 Resource 文件转换为 Document 文件；
+ * 通过实现了{@link BeanDefinitionDocumentReader}接口 的 {@link DefaultBeanDefinitionDocumentReader} 类对 Document 进行解析，
+ * 并使用 {@link BeanDefinitionParserDelegate} 对 Element 进行解析。
+ * <p>
  * Bean definition reader for XML bean definitions.
- * Delegates the actual XML document reading to an implementation
+ * Delegates the  actualXML document reading to an implementation
  * of the {@link BeanDefinitionDocumentReader} interface.
  *
  * <p>Typically applied to a
