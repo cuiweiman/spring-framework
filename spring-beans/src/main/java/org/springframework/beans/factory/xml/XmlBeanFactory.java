@@ -6,10 +6,17 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.core.io.Resource;
 
 /**
- * 对 DefaultListableBeanFactory 类进行扩展，主要用于从 XML 文件中读取 BeanDefinition ，对于
+ * 对 {@link DefaultListableBeanFactory} 类进行扩展，主要用于从 XML 文件中读取 BeanDefinition ，对于
  * 注册及获取 Bean 都是使用从父类 DefaultListableBeanFactory 继承的方法。与父类的不同在于，个性化实现了
- * XmlBeanDefinitionReader 类的 Reader 属性对 XML 资源进行数据读取。
- *
+ * {@link XmlBeanDefinitionReader} 类的 Reader 属性对 XML 资源进行数据读取。
+ * <p>
+ * ```java
+ * BeanFactory bf = new XmlBeanFactory(new ClassPathResource("beanResourceTest.xml"));
+ * ```
+ * 首先调用 {@link org.springframework.core.io.ClassPathResource} 的构造函数，来构造 Resource 资源文件对象的实例，
+ * 然后就可以使用 Resource 提供的各种服务来操作，有了Resource后就可以进行 XmlBeanFactory 初始化了。可是 Resource资
+ * 源是如何封装的呢？{@see org.springframework.core.io.ClassPathResource}
+ * <p>
  * Convenience extension of {@link DefaultListableBeanFactory} that reads bean definitions
  * from an XML document. Delegates to {@link XmlBeanDefinitionReader} underneath; effectively
  * equivalent to using an XmlBeanDefinitionReader with a DefaultListableBeanFactory.
@@ -57,23 +64,26 @@ public class XmlBeanFactory extends DefaultListableBeanFactory {
 	 * @throws BeansException in case of loading or parsing errors
 	 */
 	public XmlBeanFactory(Resource resource) throws BeansException {
+		// 调用 XmlBeanFactory(Resource,BeanFactory) 构造方法
 		this(resource, null);
 	}
 
 	/**
-	 * <p>
 	 * 真正实现资源加载的构造函数：XmlBeanDefinitionReader 进行数据加载
 	 * </p>
+	 * parentBeanFactory 父类的 BeanFactory，用于 Factory 的合并，可以为null。
+	 * <p>
 	 * Create a new XmlBeanFactory with the given input stream,
 	 * which must be parsable using DOM.
 	 *
 	 * @param resource          the XML resource to load bean definitions from
-	 * @param parentBeanFactory parent bean factory
+	 * @param parentBeanFactory parent bean factory。
 	 * @throws BeansException in case of loading or parsing errors
 	 */
 	public XmlBeanFactory(Resource resource, BeanFactory parentBeanFactory) throws BeansException {
-		// 调用父类构造函数，进行初始化
+		// 调用父类构造函数，进行初始化。{@code AbstractAutowireCapableBeanFactory#AbstractAutowireCapableBeanFactory(@Nullable BeanFactory parentBeanFactory)}
 		super(parentBeanFactory);
+		// 资源加载的实现
 		this.reader.loadBeanDefinitions(resource);
 	}
 

@@ -17,6 +17,8 @@
 package org.springframework.core.env;
 
 /**
+ * 定义获取 Environment 方法。
+ * <p>
  * Interface indicating a component that contains and exposes an {@link Environment} reference.
  *
  * <p>All Spring application contexts are EnvironmentCapable, and the interface is used primarily
@@ -33,10 +35,10 @@ package org.springframework.core.env;
  * a ConfigurableApplicationContext, at which point it too may be configured.
  *
  * @author Chris Beams
- * @since 3.1
  * @see Environment
  * @see ConfigurableEnvironment
  * @see org.springframework.context.ConfigurableApplicationContext#getEnvironment()
+ * @since 3.1
  */
 public interface EnvironmentCapable {
 
