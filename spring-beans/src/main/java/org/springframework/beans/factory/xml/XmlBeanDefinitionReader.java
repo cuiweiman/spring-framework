@@ -189,6 +189,8 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	}
 
 	/**
+	 * XML 解析器 是否识别到 XML命名空间
+	 * <p>
 	 * Return whether or not the XML parser should be XML namespace aware.
 	 */
 	public boolean isNamespaceAware() {
@@ -253,6 +255,8 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	}
 
 	/**
+	 * 获取 EntityResolver，如果未指定，则生成默认的 实体解析器。
+	 * <p>
 	 * Return the EntityResolver to use, building a default resolver
 	 * if none specified.
 	 */
@@ -300,6 +304,9 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * EncodedResource 主要用于对资源文件的编码进行处理，主要逻辑体现在 {@see EncodedResource.getReader()} 方法中，
 	 * 当设置了编码属性时，Spring会使用相应的编码作为输入流的编码。
 	 * </p>
+	 * 获取输入流；从 Resource 中获取对应的 InputStream 并构造 InputSource；
+	 * 通过构造 InputSource 实例和 Resource 实例继续调用函数 doLoadBeanDefinitions。
+	 * <p>
 	 * Load bean definitions from the specified XML file.
 	 *
 	 * @param resource the resource descriptor for the XML file
@@ -324,24 +331,30 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 		if (logger.isTraceEnabled()) {
 			logger.trace("Loading XML bean definitions from " + encodedResource);
 		}
-
+		// 通过属性 来记录 已经加载的资源
 		Set<EncodedResource> currentResources = this.resourcesCurrentlyBeingLoaded.get();
 
 		if (!currentResources.add(encodedResource)) {
+			// 检测到 encodedResource 中有循环加载，请检查 导入的 BeanDefinition。
 			throw new BeanDefinitionStoreException(
 					"Detected cyclic loading of " + encodedResource + " - check your import definitions!");
 		}
 
+		// 从 encodedResource 中获取到封装好的 Resource 对象，并在此从 Resource 中获取 InputStream。
 		try (InputStream inputStream = encodedResource.getResource().getInputStream()) {
+			// 创建 XML实体的单个输入源对象（InputSource）。
 			InputSource inputSource = new InputSource(inputStream);
 			if (encodedResource.getEncoding() != null) {
+				// 设置 相同的 编码格式
 				inputSource.setEncoding(encodedResource.getEncoding());
 			}
+			// 核心逻辑部分
 			return doLoadBeanDefinitions(inputSource, encodedResource.getResource());
 		} catch (IOException ex) {
 			throw new BeanDefinitionStoreException(
 					"IOException parsing XML document from " + encodedResource.getResource(), ex);
 		} finally {
+			// 从当前 容器中 移除 encodedResource。移除后容器若为空，那么从当前 ThreadLocal线程变量池 中移除 currentResources容器
 			currentResources.remove(encodedResource);
 			if (currentResources.isEmpty()) {
 				this.resourcesCurrentlyBeingLoaded.remove();
@@ -377,6 +390,10 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 
 
 	/**
+	 * 从指定 XML 文件中 加载 BeanDefinition 的真是方法：
+	 * 1. 加载XML文件，并得到对应的Document；
+	 * 2. 根据返回的Document 注册 Bean 信息（非常复杂）。
+	 * <p>
 	 * Actually load bean definitions from the specified XML file.
 	 *
 	 * @param inputSource the SAX InputSource to read from
@@ -390,7 +407,9 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 			throws BeanDefinitionStoreException {
 
 		try {
+			// 加载XML文件，并得到对应的Document
 			Document doc = doLoadDocument(inputSource, resource);
+			// 注册 BeanDefinition，并返回注册 BeanDefinition的数量
 			int count = registerBeanDefinitions(doc, resource);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Loaded " + count + " bean definitions from " + resource);
@@ -417,6 +436,11 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	}
 
 	/**
+	 * 使用配置的 文档加载器DocumentLoader 加载指定的 文档资源。
+	 * {@link #getEntityResolver} 获取实体类处理器
+	 * {@link #isNamespaceAware} 判断 XML 解析器 是否识别到 XML命名空间
+	 * {@link #getValidationModeForResource} 获取XML文件的验证模式。
+	 * <p>
 	 * Actually load the specified document using the configured DocumentLoader.
 	 *
 	 * @param inputSource the SAX InputSource to read from
@@ -432,6 +456,37 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	}
 
 	/**
+	 * 获取 指定资源 Resource 文件 的 验证模式(为了保证 XML 文件的正确性)。
+	 * XML常用的两种验证模式有 DTD(Document Type Definition 文档类型定义) 和 XSD 。
+	 * 最终实现方法中，判断 XML验证模式的方法 就是判断 是否包含 DOCTYPE，如果包含 就是 DTD，否则就是 XSD。
+	 * <p>
+	 * DTD：一种 XML 约束模式语言，XML文件的验证机制，属于 XML文件的组成部分。是保证XML文档格式正确的有效方法，
+	 * 可以通过比较XML文档和DTD文件来看文档是否符合规范，元素和标签使用是否正确。一个DTD文档包含：元素的定义规则、
+	 * 元素间关系的定义规则、元素可使用的属性、可使用的实体或符号规则。
+	 * 使用DTD验证模式时，要在XML文件的头部声明，例如
+	 * ```XML
+	 * <?xml version="1.0" encoding="UTF-8"?>
+	 * <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN 2.0//EN" "https://www.springframework.org/dtd/spring-beans-2.0.dtd">
+	 * <beans>
+	 * ... ...
+	 * </beans>
+	 * ```
+	 * <p>
+	 * XML Schema 语言就是 XSD（XML Schemas Definition），描述了 XML 文件的结构。可以用指定的XML Schema 指定XML文档允许的结构
+	 * 和内容，并根据此检查XML文档是否有效。XML Schema本身就是XML文档，符合XML语法结构，可以使用XML解析器解析。
+	 * XML Schema 文档校验 XML文档时，要声明名称空间（xmlns=https://www.Springframework.org/schema/beans），还要指定名称空间
+	 * 对应的XML Schema的存储位置，通过 schemaLocation 属性指定。它包含两部分：名称空间的URL、名称空间所标识的 XML Schema文件位置
+	 * 或URL地址（xsi:schemaLocation="https://www/springframework.org/schema/beans http://www.Springframework.org/schema/neams/Spring-beans.xsd"）
+	 * <p>
+	 * ````xml
+	 * <?xml version="1.0" encoding="UTF-8"?>
+	 * <beans xmlns="http://www.Springframework.org/schema/beams"
+	 * xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	 * xsi:schemaLocation="https://www/springframework.org/schema/beans
+	 * http://www.Springframework.org/schema/beams/Spring-beans.xsd">
+	 * ... ...
+	 * </beans>
+	 * ```
 	 * Determine the validation mode for the specified {@link Resource}.
 	 * If no explicit validation mode has been configured, then the validation
 	 * mode gets {@link #detectValidationMode detected} from the given resource.
@@ -442,9 +497,13 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 */
 	protected int getValidationModeForResource(Resource resource) {
 		int validationModeToUse = getValidationMode();
+		// 如果 指定了 验证模式，那么使用指定的验证模式
+		// 可以使用 {@link #setValidationMode} 设定
 		if (validationModeToUse != VALIDATION_AUTO) {
 			return validationModeToUse;
 		}
+		// 如果未指定，那么 自动检测。
+		// {@link #detectValidationMode} 自动监测XML的验证模式。
 		int detectedMode = detectValidationMode(resource);
 		if (detectedMode != VALIDATION_AUTO) {
 			return detectedMode;
@@ -452,10 +511,14 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 		// Hmm, we didn't get a clear indication... Let's assume XSD,
 		// since apparently no DTD declaration has been found up until
 		// detection stopped (before finding the document's root tag).
+		// 没找到明确的特征，我们假设是 XSD，因为很明显直到现在还没找到 DTD 声明
+		// 停止检测（在找到 文档的 根标记之前）。
 		return VALIDATION_XSD;
 	}
 
 	/**
+	 * 自动监测XML的验证模式
+	 * <p>
 	 * Detect which kind of validation to perform on the XML file identified
 	 * by the supplied {@link Resource}. If the file has a {@code DOCTYPE}
 	 * definition then DTD validation is used otherwise XSD validation is assumed.
@@ -482,6 +545,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 		}
 
 		try {
+			// 自动监测 XML 验证模式
 			return this.validationModeDetector.detectValidationMode(inputStream);
 		} catch (IOException ex) {
 			throw new BeanDefinitionStoreException("Unable to determine validation mode for [" +
