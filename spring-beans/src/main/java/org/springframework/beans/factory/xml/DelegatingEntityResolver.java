@@ -16,32 +16,57 @@
 
 package org.springframework.beans.factory.xml;
 
-import java.io.IOException;
-
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
 import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
+import java.io.IOException;
 
 /**
+ * Spring中使用 DelegatingEntityResolver 实现 EntityResolver，主要是 提供一个寻找DTD声明的方法，以通过SAX实现对XML文档的验证.
+ * resolveEntity 方法的实现 {@link DelegatingEntityResolver#resolveEntity} 所示。
+ * <p>
+ * 对于 XSD 配置格式的 XML 文件而言：{@link EntityResolver#resolveEntity} 方法中两个参数
+ * publicId 和 systemId 分别为：null，http://www.Springframework.org/schema/beams/Spring-beans.xsd
+ * ```xml
+ * <?xml version="1.0" encoding="UTF-8"?>
+ * <beans xmlns="http://www.Springframework.org/schema/beams"
+ * xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ * xsi:schemaLocation="https://www/springframework.org/schema/beans
+ * http://www.Springframework.org/schema/beams/Spring-beans.xsd">
+ * </beans>
+ * ```
+ * <p>
+ * 对于 DTD 验证模式的 XML文档中：{@link EntityResolver#resolveEntity} 方法中两个参数
+ * publicId 和 systemId 分别为：-//SPRING//DTD BEAN 2.0//EN，https://www.springframework.org/dtd/spring-beans-2.0.dtd
+ * ```xml
+ * <?xml version="1.0" encoding="UTF-8"?>
+ * <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN 2.0//EN" "https://www.springframework.org/dtd/spring-beans-2.0.dtd">
+ * <beans> </beans>
+ * ```
+ * <p>
  * {@link EntityResolver} implementation that delegates to a {@link BeansDtdResolver}
  * and a {@link PluggableSchemaResolver} for DTDs and XML schemas, respectively.
  *
  * @author Rob Harrop
  * @author Juergen Hoeller
  * @author Rick Evans
- * @since 2.0
  * @see BeansDtdResolver
  * @see PluggableSchemaResolver
+ * @since 2.0
  */
 public class DelegatingEntityResolver implements EntityResolver {
 
-	/** Suffix for DTD files. */
+	/**
+	 * Suffix for DTD files.
+	 */
 	public static final String DTD_SUFFIX = ".dtd";
 
-	/** Suffix for schema definition files. */
+	/**
+	 * Suffix for schema definition files.
+	 */
 	public static final String XSD_SUFFIX = ".xsd";
 
 
@@ -55,8 +80,9 @@ public class DelegatingEntityResolver implements EntityResolver {
 	 * a default {@link BeansDtdResolver} and a default {@link PluggableSchemaResolver}.
 	 * <p>Configures the {@link PluggableSchemaResolver} with the supplied
 	 * {@link ClassLoader}.
+	 *
 	 * @param classLoader the ClassLoader to use for loading
-	 * (can be {@code null}) to use the default ClassLoader)
+	 *                    (can be {@code null}) to use the default ClassLoader)
 	 */
 	public DelegatingEntityResolver(@Nullable ClassLoader classLoader) {
 		this.dtdResolver = new BeansDtdResolver();
@@ -66,7 +92,8 @@ public class DelegatingEntityResolver implements EntityResolver {
 	/**
 	 * Create a new DelegatingEntityResolver that delegates to
 	 * the given {@link EntityResolver EntityResolvers}.
-	 * @param dtdResolver the EntityResolver to resolve DTDs with
+	 *
+	 * @param dtdResolver    the EntityResolver to resolve DTDs with
 	 * @param schemaResolver the EntityResolver to resolve XML schemas with
 	 */
 	public DelegatingEntityResolver(EntityResolver dtdResolver, EntityResolver schemaResolver) {
@@ -77,6 +104,21 @@ public class DelegatingEntityResolver implements EntityResolver {
 	}
 
 
+	/**
+	 * EntityResolver 接口 实现类。不同的验证模式，返回了不同的 解析器。
+	 * <p>
+	 * 加载 DTD 类型的是 {@link BeansDtdResolver#resolveEntity} 方法，是直接 截取systemId 最后的xx.dtd
+	 * 然后从当前路径下寻找；
+	 * <p>
+	 * 加载 XSD 类型的是 {@link PluggableSchemaResolver#resolveEntity} 方法，默认到 META-INF/Spring.schemas
+	 * 文件中找到 systemId 对应的 XSD 文件并加载。
+	 *
+	 * @param publicId publicId
+	 * @param systemId systemId
+	 * @return InputSource
+	 * @throws SAXException SAX解析异常
+	 * @throws IOException  IO异常
+	 */
 	@Override
 	@Nullable
 	public InputSource resolveEntity(@Nullable String publicId, @Nullable String systemId)
@@ -84,9 +126,10 @@ public class DelegatingEntityResolver implements EntityResolver {
 
 		if (systemId != null) {
 			if (systemId.endsWith(DTD_SUFFIX)) {
+				// 如果是 DTD 验证模式，从这里解析
 				return this.dtdResolver.resolveEntity(publicId, systemId);
-			}
-			else if (systemId.endsWith(XSD_SUFFIX)) {
+			} else if (systemId.endsWith(XSD_SUFFIX)) {
+				// 如果是 XSD 验证模式，通过调用 META-INF/Spring.schemas 解析
 				return this.schemaResolver.resolveEntity(publicId, systemId);
 			}
 		}

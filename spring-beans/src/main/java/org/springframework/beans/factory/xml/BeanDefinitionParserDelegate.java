@@ -1487,6 +1487,7 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 判断 XML中的 Bean 是默认命名空间，还是自定义命名空间
 	 * Determine whether the given node indicates the default namespace.
 	 */
 	public boolean isDefaultNamespace(Node node) {

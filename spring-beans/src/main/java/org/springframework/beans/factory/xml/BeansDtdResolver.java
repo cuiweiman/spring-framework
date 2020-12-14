@@ -16,19 +16,20 @@
 
 package org.springframework.beans.factory.xml;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.xml.sax.EntityResolver;
-import org.xml.sax.InputSource;
-
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 /**
+ * 接口 {@link EntityResolver} 的实现 ，从Spring类路径（或JAR文件）加载DTD。
+ * <p>
  * {@link EntityResolver} implementation for the Spring beans DTD,
  * to load the DTD from the Spring class path (or JAR file).
  *
@@ -39,8 +40,8 @@ import org.springframework.lang.Nullable;
  *
  * @author Juergen Hoeller
  * @author Colin Sampaleanu
- * @since 04.06.2003
  * @see ResourceEntityResolver
+ * @since 04.06.2003
  */
 public class BeansDtdResolver implements EntityResolver {
 
@@ -76,8 +77,7 @@ public class BeansDtdResolver implements EntityResolver {
 						logger.trace("Found beans DTD [" + systemId + "] in classpath: " + dtdFile);
 					}
 					return source;
-				}
-				catch (FileNotFoundException ex) {
+				} catch (FileNotFoundException ex) {
 					if (logger.isDebugEnabled()) {
 						logger.debug("Could not resolve beans DTD [" + systemId + "]: not found in classpath", ex);
 					}

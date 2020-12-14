@@ -264,12 +264,20 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	/**
 	 * 获取 EntityResolver，如果未指定，则生成默认的 实体解析器。
 	 * <p>
+	 * {@link EntityResolver}： 如果SAX应用程序需要实现自定义处理外部实体，则必须实现此接口并使用 setEntityResolver() 方法向SAX
+	 * 驱动器注册个实例。即对于解析一个XML，SAX首先读取该XML文档上的声明，根据声明再去寻找相应的DTD定义，以便对文档进行验证。默认的
+	 * 寻找规则是通过网络（即声明DTD的URL地址）下载响应的DTD声明，并进行认证。 EntityResolver 可以提供一个 如何寻找DTD声明的方法。
+	 * 比如将DTD文档放在项目路径下，实现时通过 EntityResolver 直接获取到 该DTD文档并返回给SAX，就避免了网络下载的过程。
+	 * <p>
+	 * Spring中使用 {@link DelegatingEntityResolver} 实现 EntityResolver 接口。
+	 * <p>
 	 * Return the EntityResolver to use, building a default resolver
 	 * if none specified.
 	 */
 	protected EntityResolver getEntityResolver() {
 		if (this.entityResolver == null) {
 			// Determine default EntityResolver to use.
+			// 确定要使用的 默认 EntityResolver。
 			ResourceLoader resourceLoader = getResourceLoader();
 			if (resourceLoader != null) {
 				this.entityResolver = new ResourceEntityResolver(resourceLoader);
@@ -561,12 +569,18 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	}
 
 	/**
+	 * 注册 给定 DOM文档中 包含的 BeanDefinition 。
+	 * <p>
+	 * 这个方法很好地体现了 面向对象中的 单一职责原则，将逻辑处理委托给单一的类进行处理，即{@link BeanDefinitionDocumentReader}，
+	 * BeanDefinitionDocumentReader 是一个接口，实例化是在 {@link #createBeanDefinitionDocumentReader} 中完成的，通过此方法，
+	 * BeanDefinitionDocumentReader 真正的类型其实 已经是 {@link DefaultBeanDefinitionDocumentReader} 了，
+	 * <p>
 	 * Register the bean definitions contained in the given DOM document.
 	 * Called by {@code loadBeanDefinitions}.
 	 * <p>Creates a new instance of the parser class and invokes
 	 * {@code registerBeanDefinitions} on it.
 	 *
-	 * @param doc      the DOM document
+	 * @param doc      the DOM document. {@link DocumentLoader#loadDocument} 解析而来。
 	 * @param resource the resource descriptor (for context information)
 	 * @return the number of bean definitions found
 	 * @throws BeanDefinitionStoreException in case of parsing errors
@@ -575,9 +589,14 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * @see BeanDefinitionDocumentReader#registerBeanDefinitions
 	 */
 	public int registerBeanDefinitions(Document doc, Resource resource) throws BeanDefinitionStoreException {
+		// 使用 DefaultBeanDefinitionDocumentReader实体类 实例化一个 BeanDefinitionDocumentReader 接口对象
 		BeanDefinitionDocumentReader documentReader = createBeanDefinitionDocumentReader();
+		// 在实例化 BeanDefinitionReader 时会将 BeanDefinitionRegistry 传入，默认使用继承自 DefaultListableBeanFactory 的子类
+		// 记录统计 当前 BeanDefinition 的加载个数
 		int countBefore = getRegistry().getBeanDefinitionCount();
+		// 加载及注册 Bean
 		documentReader.registerBeanDefinitions(doc, createReaderContext(resource));
+		// 几率本次 加载的 BeanDefinition 个数
 		return getRegistry().getBeanDefinitionCount() - countBefore;
 	}
 

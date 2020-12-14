@@ -16,21 +16,26 @@
 
 package org.springframework.beans.factory.xml;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.lang.Nullable;
+import org.springframework.util.xml.XmlValidationModeDetector;
 import org.w3c.dom.Document;
 import org.xml.sax.EntityResolver;
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.InputSource;
 
-import org.springframework.lang.Nullable;
-import org.springframework.util.xml.XmlValidationModeDetector;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 /**
+ * Spring框架中 DocumentLoader 接口的默认实现类
+ * 使用标准 JAXP 配置的XML解析器加载 {@link Document documents}。如果想改变
+ * 加载 Document 的 {@link DocumentBuilder}，一种方法是在启动 JVM时，定义相应的Java系统属性。
+ * 例如，使用Oracle的 DocumentBuilder，可以按照如下方式启动应用：
+ * java -Djavax.xml.parsers.DocumentBuilderFactory=oracle.xml.jaxp.JXDocumentBuilderFactory MyMainClass
+ * <p>
  * Spring's default {@link DocumentLoader} implementation.
  *
  * <p>Simply loads {@link Document documents} using the standard JAXP-configured
@@ -62,12 +67,22 @@ public class DefaultDocumentLoader implements DocumentLoader {
 
 
 	/**
+	 * 使用 JAXP配置的XML解析器，从给定的 InputSource 中加载 Document。
+	 * <p>
+	 * 创造 DocumentBuilderFactory，在通过 DocumentBuilderFactory 创建出 DocumentBuilder，
+	 * 进而解析 InputSource 来返回 Document 对象。
+	 * <p>
 	 * Load the {@link Document} at the supplied {@link InputSource} using the standard JAXP-configured
 	 * XML parser.
+	 *
+	 * @param entityResolver 实体类处理器，传入的参数 是通过 {@link XmlBeanDefinitionReader#getEntityResolver} 拿到的
+	 *                       作用是：提供一个寻找DTD声明的方法，由程序实现寻找DTD声明的过程。例如可以将DTD文件放在项目某处，
+	 *                       在实现时直接将此文件读取并返回给 SAX，从而在SAX获取XML文档上的声明后再寻找DTD定义的过程中（为了
+	 *                       对XML文档进行验证），避免了从网络上下载相应的DTD声明。
 	 */
 	@Override
 	public Document loadDocument(InputSource inputSource, EntityResolver entityResolver,
-			ErrorHandler errorHandler, int validationMode, boolean namespaceAware) throws Exception {
+								 ErrorHandler errorHandler, int validationMode, boolean namespaceAware) throws Exception {
 
 		DocumentBuilderFactory factory = createDocumentBuilderFactory(validationMode, namespaceAware);
 		if (logger.isTraceEnabled()) {
@@ -79,8 +94,9 @@ public class DefaultDocumentLoader implements DocumentLoader {
 
 	/**
 	 * Create the {@link DocumentBuilderFactory} instance.
+	 *
 	 * @param validationMode the type of validation: {@link XmlValidationModeDetector#VALIDATION_DTD DTD}
-	 * or {@link XmlValidationModeDetector#VALIDATION_XSD XSD})
+	 *                       or {@link XmlValidationModeDetector#VALIDATION_XSD XSD})
 	 * @param namespaceAware whether the returned factory is to provide support for XML namespaces
 	 * @return the JAXP DocumentBuilderFactory
 	 * @throws ParserConfigurationException if we failed to build a proper DocumentBuilderFactory
@@ -98,12 +114,11 @@ public class DefaultDocumentLoader implements DocumentLoader {
 				factory.setNamespaceAware(true);
 				try {
 					factory.setAttribute(SCHEMA_LANGUAGE_ATTRIBUTE, XSD_SCHEMA_LANGUAGE);
-				}
-				catch (IllegalArgumentException ex) {
+				} catch (IllegalArgumentException ex) {
 					ParserConfigurationException pcex = new ParserConfigurationException(
 							"Unable to validate using XSD: Your JAXP provider [" + factory +
-							"] does not support XML Schema. Are you running on Java 1.4 with Apache Crimson? " +
-							"Upgrade to Apache Xerces (or Java 1.5) for full XSD support.");
+									"] does not support XML Schema. Are you running on Java 1.4 with Apache Crimson? " +
+									"Upgrade to Apache Xerces (or Java 1.5) for full XSD support.");
 					pcex.initCause(ex);
 					throw pcex;
 				}
@@ -117,15 +132,16 @@ public class DefaultDocumentLoader implements DocumentLoader {
 	 * Create a JAXP DocumentBuilder that this bean definition reader
 	 * will use for parsing XML documents. Can be overridden in subclasses,
 	 * adding further initialization of the builder.
-	 * @param factory the JAXP DocumentBuilderFactory that the DocumentBuilder
-	 * should be created with
+	 *
+	 * @param factory        the JAXP DocumentBuilderFactory that the DocumentBuilder
+	 *                       should be created with
 	 * @param entityResolver the SAX EntityResolver to use
-	 * @param errorHandler the SAX ErrorHandler to use
+	 * @param errorHandler   the SAX ErrorHandler to use
 	 * @return the JAXP DocumentBuilder
 	 * @throws ParserConfigurationException if thrown by JAXP methods
 	 */
 	protected DocumentBuilder createDocumentBuilder(DocumentBuilderFactory factory,
-			@Nullable EntityResolver entityResolver, @Nullable ErrorHandler errorHandler)
+													@Nullable EntityResolver entityResolver, @Nullable ErrorHandler errorHandler)
 			throws ParserConfigurationException {
 
 		DocumentBuilder docBuilder = factory.newDocumentBuilder();

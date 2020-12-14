@@ -22,7 +22,7 @@ import org.xml.sax.ErrorHandler;
 import org.xml.sax.InputSource;
 
 /**
- * 定义 从 资源文件 加载到转换为 Document 的功能。
+ * 定义 从 资源文件 加载 到 转换为 Document 的功能。
  * <p>
  * Strategy interface for loading an XML {@link Document}.
  *
@@ -33,6 +33,8 @@ import org.xml.sax.InputSource;
 public interface DocumentLoader {
 
 	/**
+	 * 从指定资源中加载 {@link Document document}
+	 * <p>
 	 * Load a {@link Document document} from the supplied {@link InputSource source}.
 	 *
 	 * @param inputSource    the source of the document that is to be loaded
