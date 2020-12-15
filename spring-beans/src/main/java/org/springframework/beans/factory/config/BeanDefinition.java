@@ -23,7 +23,26 @@ import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 
 /**
- * 描述一个 Bean 实例信息的所有属性、构造器参数值、以及创建实例时所需的更多信息
+ * 描述一个 Bean 实例信息的所有属性、构造器参数值、以及创建实例时所需的更多信息。
+ * <p>
+ * 在 Spring 中有三种实现：
+ * {@link org.springframework.beans.factory.support.RootBeanDefinition}
+ * {@link org.springframework.beans.factory.support.ChildBeanDefinition}
+ * {@link org.springframework.beans.factory.support.GenericBeanDefinition}
+ * RootBeanDefinition 是最常用的实现类，它对应一般性的 <bean>元素 标签，GenericBeanDefinition 是自2.5版本后加入的
+ * bean 文件配置属性定义类，是一站式服务类。
+ * <p>
+ * XML配置文件中可以定义 父<bean>和子<bean>，父<bean>用 RootBeanDefinition 表示，子<bean>用 ChildBeanDefinition 表示，
+ * 若没有 父<bean> 则直接使用 RootBeanDefinition 表示,
+ * {@link org.springframework.beans.factory.support.AbstractBeanDefinition} 是对两者共同的类信息进行抽象。
+ * <p>
+ * Spring通过 BeanDefinition 将配置文件中的 <bean> 配置信息转换为 容器的内部表示（类属性），并将 BeanDefinition 注册到
+ * {@link org.springframework.beans.factory.support.BeanDefinitionRegistry} 中。Spring容器的 BeanDefinitionRegistry
+ * 就像是 Spring 配置信息的 内存数据库，以map形式保存，后续操作直接从 BeanDefinitionRegistry 中读取配置信息。
+ * <p>
+ * BeanDefinition 是配置文件 <bean>元素标签在容器中的内部表示形式。XML中<bean>元素拥有 class、scope、lazy-init 等配置属性，
+ * 而 BeanDefinition 则提供了 beanClass、scope、lazyInit 属性与之对应。
+ * <p>
  * A BeanDefinition describes a bean instance, which has property values,
  * constructor argument values, and further information supplied by
  * concrete implementations.
