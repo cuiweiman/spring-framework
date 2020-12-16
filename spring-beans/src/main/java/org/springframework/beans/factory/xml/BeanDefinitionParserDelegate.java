@@ -702,13 +702,17 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 解析 给定 bean 元素的  构造函数 参数
 	 * Parse constructor-arg sub-elements of the given bean element.
 	 */
 	public void parseConstructorArgElements(Element beanEle, BeanDefinition bd) {
+		// 获取到 所有的子节点，然后遍历所有子节点一个一个进行解析
 		NodeList nl = beanEle.getChildNodes();
 		for (int i = 0; i < nl.getLength(); i++) {
 			Node node = nl.item(i);
+			// 在 Spring 默认 bean 标签元素下，且为 <constructor-arg> 元素属性
 			if (isCandidateElement(node) && nodeNameEquals(node, CONSTRUCTOR_ARG_ELEMENT)) {
+				// 解析 constructor-args
 				parseConstructorArgElement((Element) node, bd);
 			}
 		}
@@ -741,38 +745,58 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 解析给定 bean 元素的 lookup-override 子元素。
+	 * <p>
+	 * lookup-override 获取器注入，是一种特殊的方法注入，将一个方法声明为 返回某种类型的 bean，但实际要返回的bean 在配置文件中。
+	 * 此方法可用在 设计可插拔的功能上，解除程序依赖。
+	 * lookup-override实现可插拔功能 案例：https://github.com/cuiweiman/wang-wen-jun.git（com.wang.think.lookupmethod）
+	 * <p>
 	 * Parse lookup-override sub-elements of the given bean element.
 	 */
 	public void parseLookupOverrideSubElements(Element beanEle, MethodOverrides overrides) {
+		// 获取所有的 子节点
 		NodeList nl = beanEle.getChildNodes();
 		for (int i = 0; i < nl.getLength(); i++) {
 			Node node = nl.item(i);
+			// 在 Spring 默认 bean 标签的子元素下，且为 <lookup-method> 标签属性 时有效
 			if (isCandidateElement(node) && nodeNameEquals(node, LOOKUP_METHOD_ELEMENT)) {
 				Element ele = (Element) node;
 				String methodName = ele.getAttribute(NAME_ATTRIBUTE);
 				String beanRef = ele.getAttribute(BEAN_ELEMENT);
+				// 封装数据 到 LookupOverride 实例对象中，LookupOverride 继承自 MethodOverride
 				LookupOverride override = new LookupOverride(methodName, beanRef);
 				override.setSource(extractSource(ele));
+				// 将 LookupOverride 实例数据 记录在 AbstractBeanDefinition # methodOverrides 属性中
 				overrides.addOverride(override);
 			}
 		}
 	}
 
 	/**
+	 * 从给定的元素中 解析 replaced-method 子元素属性。
+	 * 主要是对 Bean 中的 replaced-method 子元素进行提取。
+	 * replaced-method 用法：在运行时用新的方法替换现有的方法。replaced-method 可以动态的替换返回实体 bean，
+	 * 而且还可以动态地更改原有方法的逻辑。使用实例：https://github.com/cuiweiman/wang-wen-jun.git（com.wang.think.replacedmethod）
 	 * Parse replaced-method sub-elements of the given bean element.
 	 */
 	public void parseReplacedMethodSubElements(Element beanEle, MethodOverrides overrides) {
+		// 获取当前节点的所有子节点
 		NodeList nl = beanEle.getChildNodes();
 		for (int i = 0; i < nl.getLength(); i++) {
 			Node node = nl.item(i);
+			// 在 Spring 默认 bean 的子元素下，且为 <replaced-method> 标签属性时有效
 			if (isCandidateElement(node) && nodeNameEquals(node, REPLACED_METHOD_ELEMENT)) {
 				Element replacedMethodEle = (Element) node;
+				// 提取 将要被替换的 旧方法
 				String name = replacedMethodEle.getAttribute(NAME_ATTRIBUTE);
+				// 提取 对应的 新的替换方法
 				String callback = replacedMethodEle.getAttribute(REPLACER_ATTRIBUTE);
+				// 构造的 ReplaceOverride 实例继承自 MethodOverride，用于记录 新的替换方法的信息
 				ReplaceOverride replaceOverride = new ReplaceOverride(name, callback);
-				// Look for arg-type match elements.
+				// Look for arg-type match elements. 寻找参数
 				List<Element> argTypeEles = DomUtils.getChildElementsByTagName(replacedMethodEle, ARG_TYPE_ELEMENT);
 				for (Element argTypeEle : argTypeEles) {
+					// 记录 新的替换方法 所需的参数
 					String match = argTypeEle.getAttribute(ARG_TYPE_MATCH_ATTRIBUTE);
 					match = (StringUtils.hasText(match) ? match : DomUtils.getTextValue(argTypeEle));
 					if (StringUtils.hasText(match)) {
@@ -780,17 +804,37 @@ public class BeanDefinitionParserDelegate {
 					}
 				}
 				replaceOverride.setSource(extractSource(replacedMethodEle));
+				// 将 ReplaceOverride 实例 记录在 AbstractionBeanDefinition 的 methodOverrides 属性中
 				overrides.addOverride(replaceOverride);
 			}
 		}
 	}
 
 	/**
+	 * 解析 构造函数的参数 元素。
+	 * <p>
+	 * 如果指定了 index 属性：
+	 * 1. 解析 Construct-arg 的子元素
+	 * 2. 使用 {@link ConstructorArgumentValues.ValueHolder} 类型来封装解析出来的元素
+	 * 3. 将 type、name 和 index 属性一并封装在 ConstructorArgumentValues.ValueHolder 类型中，
+	 * 并添加至当前 BeanDefinition 的 constructorArgumentValues 的 indexedArgumentValues 属性中。
+	 * <p>
+	 * 如果没有指定 index 属性：
+	 * 1. 解析 Construct-arg 的子元素
+	 * 2. 使用 {@link ConstructorArgumentValues.ValueHolder} 类型来封装解析出来的元素
+	 * 3. 将 type、name 和 index 属性一并封装在 ConstructorArgumentValues.ValueHolder 类型中，
+	 * 并添加至当前 BeanDefinition 的 constructorArgumentValues 的 genericArgumentValues 属性中。
+	 * <p>
+	 * 是否指定 index 属性，Spring的处理流程基本是相同的，区别在于 属性信息 被存放的位置
+	 * <p>
 	 * Parse a constructor-arg element.
 	 */
 	public void parseConstructorArgElement(Element ele, BeanDefinition bd) {
+		// 提取 index 属性
 		String indexAttr = ele.getAttribute(INDEX_ATTRIBUTE);
+		// 提取 type 属性
 		String typeAttr = ele.getAttribute(TYPE_ATTRIBUTE);
+		// 提取 name 属性
 		String nameAttr = ele.getAttribute(NAME_ATTRIBUTE);
 		if (StringUtils.hasLength(indexAttr)) {
 			try {
@@ -800,6 +844,7 @@ public class BeanDefinitionParserDelegate {
 				} else {
 					try {
 						this.parseState.push(new ConstructorArgumentEntry(index));
+						// 解析 ele 对应的 属性元素
 						Object value = parsePropertyValue(ele, bd, null);
 						ConstructorArgumentValues.ValueHolder valueHolder = new ConstructorArgumentValues.ValueHolder(value);
 						if (StringUtils.hasLength(typeAttr)) {
@@ -810,6 +855,7 @@ public class BeanDefinitionParserDelegate {
 						}
 						valueHolder.setSource(extractSource(ele));
 						if (bd.getConstructorArgumentValues().hasIndexedArgumentValue(index)) {
+							// 不允许 重复指定 相同参数
 							error("Ambiguous constructor-arg entries for index " + index, ele);
 						} else {
 							bd.getConstructorArgumentValues().addIndexedArgumentValue(index, valueHolder);
@@ -822,8 +868,10 @@ public class BeanDefinitionParserDelegate {
 				error("Attribute 'index' of tag 'constructor-arg' must be an integer", ele);
 			}
 		} else {
+			// 没有 index 属性则忽略，自动寻找
 			try {
 				this.parseState.push(new ConstructorArgumentEntry());
+				// 解析 ele 对应的 属性元素
 				Object value = parsePropertyValue(ele, bd, null);
 				ConstructorArgumentValues.ValueHolder valueHolder = new ConstructorArgumentValues.ValueHolder(value);
 				if (StringUtils.hasLength(typeAttr)) {
@@ -906,6 +954,11 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 解析 ele 对应的 属性元素。获取属性元素的值，可能是 list集合等。
+	 * 也用于 构造函数的参数，此时 propertyName 为null？
+	 * <p>
+	 * <constructor-arg> 标签中，ref 属性、value 属性、subElement 子元素，三者必须存在且只能存在一种。
+	 * <p>
 	 * Get the value of a property element. May be a list etc.
 	 * Also used for constructor arguments, "propertyName" being null in this case.
 	 */
@@ -916,10 +969,12 @@ public class BeanDefinitionParserDelegate {
 				"<constructor-arg> element");
 
 		// Should only have one child element: ref, value, list, etc.
+		// 一个属性只能对应 一种类型：ref、value、list 等
 		NodeList nl = ele.getChildNodes();
 		Element subElement = null;
 		for (int i = 0; i < nl.getLength(); i++) {
 			Node node = nl.item(i);
+			// 排除 description属性 以及 meta 属性
 			if (node instanceof Element && !nodeNameEquals(node, DESCRIPTION_ELEMENT) &&
 					!nodeNameEquals(node, META_ELEMENT)) {
 				// Child element is what we're looking for.
@@ -931,15 +986,19 @@ public class BeanDefinitionParserDelegate {
 			}
 		}
 
+		// 判断 constructor-arg 上的 ref 属性是否存在
 		boolean hasRefAttribute = ele.hasAttribute(REF_ATTRIBUTE);
+		// 判断 constructor-arg 上的 value 属性是否存在
 		boolean hasValueAttribute = ele.hasAttribute(VALUE_ATTRIBUTE);
 		if ((hasRefAttribute && hasValueAttribute) ||
 				((hasRefAttribute || hasValueAttribute) && subElement != null)) {
+			// constructor-arg 不允许的：同时拥有 ref属性、value属性、有ref或value属性又有 子元素
 			error(elementName +
 					" is only allowed to contain either 'ref' attribute OR 'value' attribute OR sub-element", ele);
 		}
 
 		if (hasRefAttribute) {
+			// 处理 ref 属性，使用 RuntimeBeanReference 封装对应的 ref 名称
 			String refName = ele.getAttribute(REF_ATTRIBUTE);
 			if (!StringUtils.hasText(refName)) {
 				error(elementName + " contains empty 'ref' attribute", ele);
@@ -948,13 +1007,16 @@ public class BeanDefinitionParserDelegate {
 			ref.setSource(extractSource(ele));
 			return ref;
 		} else if (hasValueAttribute) {
+			// 处理 value 属性，使用 TypedStringValue 封装对应的 ref 名称
 			TypedStringValue valueHolder = new TypedStringValue(ele.getAttribute(VALUE_ATTRIBUTE));
 			valueHolder.setSource(extractSource(ele));
 			return valueHolder;
 		} else if (subElement != null) {
+			// 处理解析 子元素
 			return parsePropertySubElement(subElement, bd);
 		} else {
 			// Neither child element nor "ref" or "value" attribute found.
+			// 没有 ref 属性、也没有 value 属性，甚至没有 子元素，Spring 蒙圈了…… ^_^
 			error(elementName + " must specify a ref or value", ele);
 			return null;
 		}
