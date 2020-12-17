@@ -21,6 +21,13 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
+ * GenericBeanDefinition 是用于标准 bean 定义的一站式服务。
+ * 与任何一个 bean定义一样，它允许指定一个类以及可选的构造函数参数值和属性值。
+ * 此外，可以通过“parentName”属性灵活地配置从父bean定义派生的内容。
+ * <p>
+ * 通常，使用这个{@code GenericBeanDefinition}类来注册用户可见bean定义（后处理程序可能会对其进行操作，甚至可能重新配置父名称）。
+ * 使用{@code RootBeanDefinition}/{@code ChildBeanDefinition}，其中父/子关系是预先确定的。
+ * <p>
  * GenericBeanDefinition is a one-stop shop for standard bean definition purposes.
  * Like any bean definition, it allows for specifying a class plus optionally
  * constructor argument values and property values. Additionally, deriving from a
@@ -32,10 +39,10 @@ import org.springframework.util.ObjectUtils;
  * {@code ChildBeanDefinition} where parent/child relationships happen to be pre-determined.
  *
  * @author Juergen Hoeller
- * @since 2.5
  * @see #setParentName
  * @see RootBeanDefinition
  * @see ChildBeanDefinition
+ * @since 2.5
  */
 @SuppressWarnings("serial")
 public class GenericBeanDefinition extends AbstractBeanDefinition {
@@ -47,6 +54,7 @@ public class GenericBeanDefinition extends AbstractBeanDefinition {
 	/**
 	 * Create a new GenericBeanDefinition, to be configured through its bean
 	 * properties and configuration methods.
+	 *
 	 * @see #setBeanClass
 	 * @see #setScope
 	 * @see #setConstructorArgumentValues
@@ -59,6 +67,7 @@ public class GenericBeanDefinition extends AbstractBeanDefinition {
 	/**
 	 * Create a new GenericBeanDefinition as deep copy of the given
 	 * bean definition.
+	 *
 	 * @param original the original bean definition to copy from
 	 */
 	public GenericBeanDefinition(BeanDefinition original) {

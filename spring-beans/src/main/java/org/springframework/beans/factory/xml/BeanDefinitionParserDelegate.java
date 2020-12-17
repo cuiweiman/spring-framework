@@ -389,7 +389,7 @@ public class BeanDefinitionParserDelegate {
 	 */
 	@Nullable
 	public BeanDefinitionHolder parseBeanDefinitionElement(Element ele, @Nullable BeanDefinition containingBean) {
-		// 提取 ID 属性
+		// 提取 ID 属性 <bean id="beanId" name="beanName" />
 		String id = ele.getAttribute(ID_ATTRIBUTE);
 		// 提取 Name 属性
 		String nameAttr = ele.getAttribute(NAME_ATTRIBUTE);
@@ -414,7 +414,7 @@ public class BeanDefinitionParserDelegate {
 			checkNameUniqueness(beanName, aliases, ele);
 		}
 
-		// 进一步解析 其它属性
+		// 进一步解析 其它属性(class属性、lazy-init属性、子元素标签及属性等。复杂且重要)
 		AbstractBeanDefinition beanDefinition = parseBeanDefinitionElement(ele, beanName, containingBean);
 		if (beanDefinition != null) {
 			if (!StringUtils.hasText(beanName)) {
@@ -499,23 +499,30 @@ public class BeanDefinitionParserDelegate {
 		try {
 			// 创建 用于 承载属性的 GenericBeanDefinition 类实例
 			AbstractBeanDefinition bd = createBeanDefinition(className, parent);
+
 			// 硬编码 默认解析 Bean 的各种属性
 			parseBeanDefinitionAttributes(ele, beanName, containingBean, bd);
-			// 提取 description
+
+			//  解析 <bean> 标签下的 <description> 标签属性
 			bd.setDescription(DomUtils.getChildElementValueByTagName(ele, DESCRIPTION_ELEMENT));
 
-			// 解析元数据
+			//  解析 <bean> 标签下的 <meta> 标签属性 解析元数据
 			parseMetaElements(ele, bd);
-			// 解析 lookup-method 属性
+
+			// 解析 <bean> 标签下的 <lookup-method> 标签属性
 			parseLookupOverrideSubElements(ele, bd.getMethodOverrides());
-			// 解析 replace-method 属性
+
+			// 解析 <bean> 标签下的 <replace-method> 标签属性
 			parseReplacedMethodSubElements(ele, bd.getMethodOverrides());
 
-			// 解析 构造函数 参数
+			// 解析 <bean> 标签下的 <constructor-arg> 标签属性  解析 构造函数 参数
 			parseConstructorArgElements(ele, bd);
-			// 解析 property 子元素
+
+			// 解析 <bean> 标签下的 <property> 标签属性
 			parsePropertyElements(ele, bd);
-			// 解析 qualifier 子元素
+
+			// 解析 <bean> 标签下的 <qualifier> 标签属性.qualifier标签主要用于指定 注入Bean 的名称。如同一个接口下有两个实现类，
+			// 那么可以使用 qualifier 标签指定 value 表示的bean 具体代表的 类型type。是 SpringBoot 中的 @Qualifier 注解的实现。
 			parseQualifierElements(ele, bd);
 
 			bd.setResource(this.readerContext.getResource());
@@ -702,7 +709,7 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
-	 * 解析 给定 bean 元素的  构造函数 参数
+	 * 解析 给定 bean 元素的  构造函数 参数，即解析 <bean>标签中 <constructor-arg> 标签的内容。
 	 * Parse constructor-arg sub-elements of the given bean element.
 	 */
 	public void parseConstructorArgElements(Element beanEle, BeanDefinition bd) {
@@ -719,6 +726,7 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 解析给定 Bean元素 的 property 子元素,即解析 <bean>标签中 <property> 标签的内容。
 	 * Parse property sub-elements of the given bean element.
 	 */
 	public void parsePropertyElements(Element beanEle, BeanDefinition bd) {
@@ -732,6 +740,7 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 解析 <bean> 标签下的 <qualifier> 标签属性.
 	 * Parse qualifier sub-elements of the given bean element.
 	 */
 	public void parseQualifierElements(Element beanEle, AbstractBeanDefinition bd) {
@@ -745,7 +754,7 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
-	 * 解析给定 bean 元素的 lookup-override 子元素。
+	 * 解析给定 bean 元素的 lookup-override 子元素。即解析 <bean>标签中 <lookup-method> 标签的内容。
 	 * <p>
 	 * lookup-override 获取器注入，是一种特殊的方法注入，将一个方法声明为 返回某种类型的 bean，但实际要返回的bean 在配置文件中。
 	 * 此方法可用在 设计可插拔的功能上，解除程序依赖。
@@ -773,7 +782,7 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
-	 * 从给定的元素中 解析 replaced-method 子元素属性。
+	 * 从给定的元素中 解析 replaced-method 子元素属性。即解析 <bean>标签中 <replaced-method> 标签的内容。
 	 * 主要是对 Bean 中的 replaced-method 子元素进行提取。
 	 * replaced-method 用法：在运行时用新的方法替换现有的方法。replaced-method 可以动态的替换返回实体 bean，
 	 * 而且还可以动态地更改原有方法的逻辑。使用实例：https://github.com/cuiweiman/wang-wen-jun.git（com.wang.think.replacedmethod）
@@ -811,7 +820,7 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
-	 * 解析 构造函数的参数 元素。
+	 * 解析 构造函数的参数 元素，即解析 <bean>标签中 <constructor-arg> 标签的内容
 	 * <p>
 	 * 如果指定了 index 属性：
 	 * 1. 解析 Construct-arg 的子元素
@@ -889,9 +898,14 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 解析 <bean> 标签下的 <property> 标签属性
+	 * <p>
+	 * 使用 PropertyValue 封装返回值，并记录在 BeanDefinition 的 propertyValues 属性中
+	 * <p>
 	 * Parse a property element.
 	 */
 	public void parsePropertyElement(Element ele, BeanDefinition bd) {
+		// 提取 property 标签中的 name 属性
 		String propertyName = ele.getAttribute(NAME_ATTRIBUTE);
 		if (!StringUtils.hasLength(propertyName)) {
 			error("Tag 'property' must have a 'name' attribute", ele);
@@ -899,6 +913,7 @@ public class BeanDefinitionParserDelegate {
 		}
 		this.parseState.push(new PropertyEntry(propertyName));
 		try {
+			// 不允许多次 对同一种属性 进行 配置
 			if (bd.getPropertyValues().contains(propertyName)) {
 				error("Multiple 'property' definitions for property '" + propertyName + "'", ele);
 				return;
@@ -914,6 +929,7 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 解析 <bean> 标签下的 <qualifier> 标签属性.
 	 * Parse a qualifier element.
 	 */
 	public void parseQualifierElement(Element ele, AbstractBeanDefinition bd) {
@@ -954,11 +970,18 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
-	 * 解析 ele 对应的 属性元素。获取属性元素的值，可能是 list集合等。
-	 * 也用于 构造函数的参数，此时 propertyName 为null？
+	 * 解析 ele 对应的 属性元素。
 	 * <p>
 	 * <constructor-arg> 标签中，ref 属性、value 属性、subElement 子元素，三者必须存在且只能存在一种。
 	 * <p>
+	 * 1.略过 description 以及 meta
+	 * 2. 提取 construction-arg 上的 ref 和 value 属性，以便于根据规则验证正确性，验证规则为：ref属性、value属性、子元素 三者不能同时存在
+	 * 3. ref属性的处理，使用 RuntimeBeanReference 类型封装；如：<constructor-arg ref="a">
+	 * 4. value 属性的处理，使用 TypedStringValue 类型封装；如：<constructor-arg value="a">
+	 * 5. 子元素的处理，如:<constructor-arg><map><entry key="key" value="value"/></map></constructor-arg>，委托给另一个方法
+	 * 处理 {@link #parsePropertySubElement(Element, BeanDefinition)}
+	 * <p>
+	 * 获取属性元素的值，可能是 list集合等。也用于 构造函数的参数，此时 propertyName 为null？
 	 * Get the value of a property element. May be a list etc.
 	 * Also used for constructor arguments, "propertyName" being null in this case.
 	 */
@@ -1023,6 +1046,8 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 处理 XML 文档中，bean标签下里，<constructor-arg> 标签中的子元素
+	 * <p>
 	 * Parse a value, ref or collection sub-element of a property or
 	 * constructor-arg element.
 	 *
@@ -1035,6 +1060,8 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 处理 XML 文档中，bean标签下里，<constructor-arg> 标签中的子元素
+	 * <p>
 	 * Parse a value, ref or collection sub-element of a property or
 	 * constructor-arg element.
 	 *
@@ -1046,19 +1073,23 @@ public class BeanDefinitionParserDelegate {
 	@Nullable
 	public Object parsePropertySubElement(Element ele, @Nullable BeanDefinition bd, @Nullable String defaultValueType) {
 		if (!isDefaultNamespace(ele)) {
+			// 自定义命名空间，调用 parseNestedCustomElement() 方法解析
 			return parseNestedCustomElement(ele, bd);
 		} else if (nodeNameEquals(ele, BEAN_ELEMENT)) {
+			// 子元素 又是一个 Bean 元素，使用 parseBeanDefinitionElement() 方法解析
 			BeanDefinitionHolder nestedBd = parseBeanDefinitionElement(ele, bd);
 			if (nestedBd != null) {
 				nestedBd = decorateBeanDefinitionIfRequired(ele, nestedBd, bd);
 			}
 			return nestedBd;
 		} else if (nodeNameEquals(ele, REF_ELEMENT)) {
+			// 子元素 是一个 ref 标签。对任何bean的任何名称的泛型引用。
 			// A generic reference to any name of any bean.
 			String refName = ele.getAttribute(BEAN_REF_ATTRIBUTE);
 			boolean toParent = false;
 			if (!StringUtils.hasLength(refName)) {
 				// A reference to the id of another bean in a parent context.
+				// 解析 parent。父类上下文中，另一个bean 中id 的引用
 				refName = ele.getAttribute(PARENT_REF_ATTRIBUTE);
 				toParent = true;
 				if (!StringUtils.hasLength(refName)) {
@@ -1074,24 +1105,32 @@ public class BeanDefinitionParserDelegate {
 			ref.setSource(extractSource(ele));
 			return ref;
 		} else if (nodeNameEquals(ele, IDREF_ELEMENT)) {
+			// 子元素 是一个 idref 标签
 			return parseIdRefElement(ele);
 		} else if (nodeNameEquals(ele, VALUE_ELEMENT)) {
+			// 子元素是一个 value 标签
 			return parseValueElement(ele, defaultValueType);
 		} else if (nodeNameEquals(ele, NULL_ELEMENT)) {
 			// It's a distinguished null value. Let's wrap it in a TypedStringValue
 			// object in order to preserve the source location.
+			// 子元素是一个 null 标签.它是一个可分辨的空值。把它包装在TypedStringValue对象中，以便保留源位置。
 			TypedStringValue nullHolder = new TypedStringValue(null);
 			nullHolder.setSource(extractSource(ele));
 			return nullHolder;
 		} else if (nodeNameEquals(ele, ARRAY_ELEMENT)) {
+			// 子元素是一个 array 标签
 			return parseArrayElement(ele, bd);
 		} else if (nodeNameEquals(ele, LIST_ELEMENT)) {
+			// 子元素是一个 list 标签
 			return parseListElement(ele, bd);
 		} else if (nodeNameEquals(ele, SET_ELEMENT)) {
+			// 子元素是一个 set 标签
 			return parseSetElement(ele, bd);
 		} else if (nodeNameEquals(ele, MAP_ELEMENT)) {
+			// 子元素是一个 map 标签
 			return parseMapElement(ele, bd);
 		} else if (nodeNameEquals(ele, PROPS_ELEMENT)) {
+			// 子元素是一个 props 标签
 			return parsePropsElement(ele);
 		} else {
 			error("Unknown property sub-element: [" + ele.getNodeName() + "]", ele);
@@ -1445,6 +1484,7 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 如果适用，通过 namespace handler 装饰给定的 bean definition。
 	 * Decorate the given bean definition through a namespace handler, if applicable.
 	 *
 	 * @param ele          the current element
