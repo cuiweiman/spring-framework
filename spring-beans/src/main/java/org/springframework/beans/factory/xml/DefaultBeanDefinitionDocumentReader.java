@@ -354,7 +354,15 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		*/
 		BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
 		if (bdHolder != null) {
-			// bdHolder 不为空时，若存在默认标签的子节点下再有自定义属性，那么还需要再次对自定义标签进行解析。
+			/*
+			2. bdHolder 不为空时，若存在 默认 bean 标签的子节点是 自定义标签，那么还需要再对 自定义标签进行解析。场景如：
+			```xml
+			<bean id="test" type="com.test">
+				<mybean:user username="test"/>
+			</bean>
+			```
+			即 Spring 中的 bean 使用的是 默认标签配置，但是其中的子元素 使用的是 自定义配置标签，此时 下面的函数就会进行解析。
+			 */
 			bdHolder = delegate.decorateBeanDefinitionIfRequired(ele, bdHolder);
 			try {
 				// Register the final decorated instance.

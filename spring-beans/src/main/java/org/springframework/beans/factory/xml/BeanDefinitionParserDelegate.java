@@ -1473,6 +1473,8 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 若存在 默认 bean 标签的 子节点 是 自定义标签，那么还需要再对 自定义标签进行解析。
+	 * <p>
 	 * Decorate the given bean definition through a namespace handler, if applicable.
 	 *
 	 * @param ele         the current element
@@ -1484,6 +1486,8 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 若存在 默认 bean 标签的 子节点 是 自定义标签，那么还需要再对 自定义标签进行解析。
+	 * <p>
 	 * 如果适用，通过 namespace handler 装饰给定的 bean definition。
 	 * Decorate the given bean definition through a namespace handler, if applicable.
 	 *
@@ -1499,16 +1503,20 @@ public class BeanDefinitionParserDelegate {
 
 		// Decorate based on custom attributes first.
 		NamedNodeMap attributes = ele.getAttributes();
+		// 遍历所有 属性，看看是否有 用于 修饰的属性
 		for (int i = 0; i < attributes.getLength(); i++) {
 			Node node = attributes.item(i);
+			// 对 元素的所有属性 进行 decorateIfRequired 解析
 			finalDefinition = decorateIfRequired(node, finalDefinition, containingBd);
 		}
 
 		// Decorate based on custom nested elements.
 		NodeList children = ele.getChildNodes();
+		// 遍历所有 子节点，看看是否有 用于 修饰的 子节点标签属性
 		for (int i = 0; i < children.getLength(); i++) {
 			Node node = children.item(i);
 			if (node.getNodeType() == Node.ELEMENT_NODE) {
+				// 对 元素的 所有子标签 进行 decorateIfRequired 解析
 				finalDefinition = decorateIfRequired(node, finalDefinition, containingBd);
 			}
 		}
@@ -1516,6 +1524,14 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 方法功能：
+	 * 处理解析 自定义的标签，实质上是 bean 的自定义子标签。实现了寻找 <bean> 标签下自定义子标签，再根据
+	 * 自定义子标签 寻找命名空间处理器，并进行下一步的解析处理。
+	 * <p>
+	 * 处理过程：
+	 * 1. 获取属性 或 子标签元素的 命名空间，以此判断该元素或属性是否适用于 自定义标签的解析条件。
+	 * 2. 找出自定义类型 所对应的 NamespaceHandler 并进行进一步解析
+	 * <p>
 	 * Decorate the given bean definition through a namespace handler,
 	 * if applicable.
 	 *
@@ -1527,10 +1543,13 @@ public class BeanDefinitionParserDelegate {
 	public BeanDefinitionHolder decorateIfRequired(
 			Node node, BeanDefinitionHolder originalDef, @Nullable BeanDefinition containingBd) {
 
+		// 获取 自定义 标签的 命名空间
 		String namespaceUri = getNamespaceURI(node);
 		if (namespaceUri != null && !isDefaultNamespace(namespaceUri)) {
+			// 对 非默认标签进行修饰，根据 命名空间 找到对应的 处理器
 			NamespaceHandler handler = this.readerContext.getNamespaceHandlerResolver().resolve(namespaceUri);
 			if (handler != null) {
+				// 进行修饰
 				BeanDefinitionHolder decorated =
 						handler.decorate(node, originalDef, new ParserContext(this.readerContext, this, containingBd));
 				if (decorated != null) {
@@ -1567,6 +1586,8 @@ public class BeanDefinitionParserDelegate {
 
 
 	/**
+	 * 获取 自定义 标签的 命名空间
+	 * <p>
 	 * Get the namespace URI for the supplied node.
 	 * <p>The default implementation uses {@link Node#getNamespaceURI}.
 	 * Subclasses may override the default implementation to provide a
@@ -1606,6 +1627,8 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 确定给定的URI是否指示默认命名空间。
+	 * <p>
 	 * Determine whether the given URI indicates the default namespace.
 	 */
 	public boolean isDefaultNamespace(@Nullable String namespaceUri) {
