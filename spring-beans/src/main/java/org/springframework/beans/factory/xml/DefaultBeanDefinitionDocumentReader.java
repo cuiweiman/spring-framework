@@ -207,6 +207,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate delegate) {
 		// 对 Beas 处理
 		if (delegate.isDefaultNamespace(root)) {
+			// root节点 是 Spring 中存在的默认标签
 			NodeList nl = root.getChildNodes();
 			for (int i = 0; i < nl.getLength(); i++) {
 				Node node = nl.item(i);
@@ -216,12 +217,13 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 						// 对 Bean 的处理
 						parseDefaultElement(ele, delegate);
 					} else {
-						// 对 Bean 的处理
+						// 对 自定义标签 的处理
 						delegate.parseCustomElement(ele);
 					}
 				}
 			}
 		} else {
+			// 对 自定义标签 的处理
 			delegate.parseCustomElement(root);
 		}
 	}

@@ -1441,6 +1441,11 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	/**
+	 * 对 自定义标签 的处理。
+	 * <p>
+	 * 自定义标签的使用：为系统提供可配置化支持。Spring提供了可扩展Schema的支持，来扩展Spring自定义标签。
+	 * 使用方法见：{@see https://github.com/cuiweiman/wang-wen-jun#com.wang.think.customeralias}
+	 * <p>
 	 * Parse a custom element (outside of the default namespace).
 	 *
 	 * @param ele the element to parse
