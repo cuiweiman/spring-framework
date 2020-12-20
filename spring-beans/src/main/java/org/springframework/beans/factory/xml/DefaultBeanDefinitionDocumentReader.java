@@ -238,36 +238,57 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	 */
 	private void parseDefaultElement(Element ele, BeanDefinitionParserDelegate delegate) {
 		if (delegate.nodeNameEquals(ele, IMPORT_ELEMENT)) {
-			// import 标签的处理
+			// <import> 标签的处理
 			importBeanDefinitionResource(ele);
 		} else if (delegate.nodeNameEquals(ele, ALIAS_ELEMENT)) {
-			// alias 标签的处理
+			// <alias> 标签的处理
 			processAliasRegistration(ele);
 		} else if (delegate.nodeNameEquals(ele, BEAN_ELEMENT)) {
-			// bean 标签的处理
+			// <bean> 标签的处理
 			processBeanDefinition(ele, delegate);
 		} else if (delegate.nodeNameEquals(ele, NESTED_BEANS_ELEMENT)) {
-			// beans 标签的处理（recurse 递归）
+			// <beans> 标签的处理（recurse 递归）
 			doRegisterBeanDefinitions(ele);
 		}
 	}
 
 	/**
+	 * <import> 标签的解析，并从给定的 resource 中加载 beanDefinition 到 BeanFactory 中，过程：
+	 * 1. 获取标签中的 resource 属性值，记录在location 变量中
+	 * 2. 解析路径中的系统属性，格式如 "${user.dir}"
+	 * 3. 判断 location 是绝对路径还是相对路径
+	 * 4. 如果是绝对路径，则直接根据地址加载资源文件，并递归调用 bean 的解析过程，进行一次解析
+	 * 5. 如果是相对路径，则计算出绝对路径，在进行资源加载和解析
+	 * 6. 解析完成，触发监听器事件
+	 * <p>
+	 * ```xml
+	 * <?xml version="1.0" encoding="UTF-8"?>
+	 * <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN 2.0//EN" "https://www.springframework.org/dtd/spring-beans-2.0.dtd">
+	 * <beans>
+	 * <import resource="customerContext.xml"/>
+	 * <import resource="systemContext.xml"/>
+	 * ……
+	 * </beans>
+	 * ```
 	 * Parse an "import" element and load the bean definitions
 	 * from the given resource into the bean factory.
 	 */
 	protected void importBeanDefinitionResource(Element ele) {
+		// 获取 resource 属性值：location
 		String location = ele.getAttribute(RESOURCE_ATTRIBUTE);
 		if (!StringUtils.hasText(location)) {
+			// 如果 resource 属性值不存在，那么不做任何处理
 			getReaderContext().error("Resource location must not be empty", ele);
 			return;
 		}
 
+		// 解析系统属性，格式如："${user.dir}"
 		// Resolve system properties: e.g. "${user.dir}"
 		location = getReaderContext().getEnvironment().resolveRequiredPlaceholders(location);
 
 		Set<Resource> actualResources = new LinkedHashSet<>(4);
 
+		// 判断 resource 属性值 是个 绝对路径，还是 相对路径，true——绝对路径
 		// Discover whether the location is an absolute or relative URI
 		boolean absoluteLocation = false;
 		try {
@@ -279,6 +300,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 
 		// Absolute or relative?
 		if (absoluteLocation) {
+			// 如果是绝对路径，直接根据 路径地址，加载相应的配置文件
 			try {
 				int importCount = getReaderContext().getReader().loadBeanDefinitions(location, actualResources);
 				if (logger.isTraceEnabled()) {
@@ -290,13 +312,17 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 			}
 		} else {
 			// No URL -> considering resource location as relative to the current file.
+			// 如果是 相对路径，那么根据相对路径，计算出 绝对路径地址
 			try {
 				int importCount;
+				// Resource 接口有多个实现类，如 VfsResource、FileSystemResource等，而每个 resource 的 createRelative 方法都不同，
+				// 所以这里先使用 子类实现类的方法去尝试解析
 				Resource relativeResource = getReaderContext().getResource().createRelative(location);
 				if (relativeResource.exists()) {
 					importCount = getReaderContext().getReader().loadBeanDefinitions(relativeResource);
 					actualResources.add(relativeResource);
 				} else {
+					// 如果子实现类 解析失败，那么使用 默认解析器 ResourcePatternResolver 进行解析
 					String baseLocation = getReaderContext().getResource().getURL().toString();
 					importCount = getReaderContext().getReader().loadBeanDefinitions(
 							StringUtils.applyRelativePath(baseLocation, location), actualResources);
@@ -311,15 +337,32 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 						"Failed to import bean definitions from relative location [" + location + "]", ele, ex);
 			}
 		}
+		// 解析完成后，触发监听器
 		Resource[] actResArray = actualResources.toArray(new Resource[0]);
 		getReaderContext().fireImportProcessed(location, actResArray, extractSource(ele));
 	}
 
 	/**
+	 * <alias> 标签的解析
+	 * 在对bean定义时，除了 使用 id 属性来指定名称之外，可以使用 alias 标签提供多个名称，指向同一个 bean。
+	 * 在给 bean 增加别名时，有两种方式，一种时 name 属性，另一种就是 alias 标签:
+	 * ```xml
+	 * <bean id="testBean" name ="testBean,testBean2" class="com.Test"/>
+	 * ```
+	 * ```xml
+	 * <bean id="testBean" class="com.Test"/>
+	 * <alias name="testBean" alias="testBean,testBean2 />
+	 * ```
+	 * <p>
+	 * 使用场景：组件 A 在 XML 配置文件中定义了一个 componentA 的DataSource 类型的 Bean，
+	 * 组件B 想在 其XML 中以 componentB 命名来引用此同一个 Bean。
+	 * <p>
 	 * Process the given alias element, registering the alias with the registry.
 	 */
 	protected void processAliasRegistration(Element ele) {
+		// 获取 BeanName
 		String name = ele.getAttribute(NAME_ATTRIBUTE);
+		// 获取 alias
 		String alias = ele.getAttribute(ALIAS_ATTRIBUTE);
 		boolean valid = true;
 		if (!StringUtils.hasText(name)) {
@@ -332,11 +375,13 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		}
 		if (valid) {
 			try {
+				// 注册 alias
 				getReaderContext().getRegistry().registerAlias(name, alias);
 			} catch (Exception ex) {
 				getReaderContext().error("Failed to register alias '" + alias +
 						"' for bean with name '" + name + "'", ele, ex);
 			}
+			// 别名注册 完成后 通知 监听器 做 相应的处理逻辑
 			getReaderContext().fireAliasRegistered(name, alias, extractSource(ele));
 		}
 	}
@@ -372,8 +417,12 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 				getReaderContext().error("Failed to register bean definition with name '" +
 						bdHolder.getBeanName() + "'", ele, ex);
 			}
-			// Send registration event.
+			// Send registration event. 发送 注册 事件
 			// 发出响应事件，通知相关的监听器，这个 Bean 加载完成。
+			/*
+			通知 监听器： 解析与注册 完成。当开发者 需要对注册 BeanDefinition 事件进行监听时，可以注册监听器，
+			将处理逻辑写入监听器，在 bean 解析和注册完成后触发。目前Spring中没有对此事件做任务逻辑处理。
+			 */
 			getReaderContext().fireComponentRegistered(new BeanComponentDefinition(bdHolder));
 		}
 	}

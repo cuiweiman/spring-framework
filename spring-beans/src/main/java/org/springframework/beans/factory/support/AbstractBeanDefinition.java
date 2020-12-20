@@ -1236,6 +1236,9 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 
 	/**
 	 * Validate this bean definition.
+	 * <p>
+	 * 主要是对 AbstractBeanDefinition 属性中的 methodOverrides 的校验，校验 methodOverrides
+	 * 是否与工厂方法并存 或者 methodOverrides 对应的方法根本不存在。
 	 *
 	 * @throws BeanDefinitionValidationException in case of validation failure
 	 */

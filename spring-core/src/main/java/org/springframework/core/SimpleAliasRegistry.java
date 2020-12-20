@@ -54,8 +54,12 @@ public class SimpleAliasRegistry implements AliasRegistry {
 	private final Map<String, String> aliasMap = new ConcurrentHashMap<>(16);
 
 	/**
-	 * 注册别名
-	 * 向 ConcurrentHashMap 中添加 别名 和 规范名称 的映射关系
+	 * 注册别名：向 ConcurrentHashMap 容器中添加 别名 和 规范名称 的映射关系。
+	 * 1. alias 与 beanName 相同情况下的处理。相同则不需要注册 别名，并且将别名从 别名容器 中移除掉
+	 * 2. 若有同名的别名有 alias——beanName 映射，再判断 已存在的 beanName 是否与 参数 beanName 相同，相同则不需处理；
+	 * 若不相同，则根据用户配置的 allowAliasOverriding （是否允许 重复别名覆盖，默认是 true）进行操作，抛出异常或者覆盖。
+	 * 3. alias 进行循环检测，当存在 aliasA——>beanNameB时，若再次出现 aliasA——>aliasC——>beanNameB，则抛出异常。
+	 * 4. 注册 alias和beanName 的映射关系 到 {@link aliasMap} 容器中
 	 *
 	 * @param name  the canonical name
 	 * @param alias the alias to be registered
@@ -64,17 +68,19 @@ public class SimpleAliasRegistry implements AliasRegistry {
 	public void registerAlias(String name, String alias) {
 		Assert.hasText(name, "'name' must not be empty");
 		Assert.hasText(alias, "'alias' must not be empty");
+		// 并发操作，加锁 防止并发问题
 		synchronized (this.aliasMap) {
 			if (alias.equals(name)) {
-				// 别名 == 规范名称，此时已不需要别名，从map中移除
+				// 别名 == 规范名称，此时已不需要这个别名，将它从 容器 中移除
 				this.aliasMap.remove(alias);
 				if (logger.isDebugEnabled()) {
 					logger.debug("Alias definition '" + alias + "' ignored since it points to same name");
 				}
 			} else {
+				// 根据别名，从 别名容器中 取出 注册的 别名对应的 beanName
 				String registeredName = this.aliasMap.get(alias);
 				if (registeredName != null) {
-					// 根据 别名 从 map 中取出规范名称
+					// 根据别名 从别名容器中 取出的 beanName == 给定的 name，说明 别名 和 标准名称的映射关系 已经注册过了
 					if (registeredName.equals(name)) {
 						// An existing alias - no need to re-register：别名映射关系已存在，不需要重复注册
 						return;
@@ -90,6 +96,7 @@ public class SimpleAliasRegistry implements AliasRegistry {
 					}
 				}
 
+				// 别名的 循环校验，当 aliasA——>beanNameB时，若再次出现 aliasA——>aliasC——>beanNameB，抛出异常
 				checkForAliasCircle(name, alias);
 				// 添加 别名-规范名称 映射关系
 				this.aliasMap.put(alias, name);
@@ -244,7 +251,7 @@ public class SimpleAliasRegistry implements AliasRegistry {
 	}
 
 	/**
-	 * 判断 给定的别名 和规范名称 是否 已经注册
+	 * 别名的 循环校验，当  aliasA——>beanNameB时，若再次出现 aliasA——>aliasC——>beanNameB 时，抛出异常
 	 * Check whether the given name points back to the given alias as an alias
 	 * in the other direction already, catching a circular reference upfront
 	 * and throwing a corresponding IllegalStateException.
