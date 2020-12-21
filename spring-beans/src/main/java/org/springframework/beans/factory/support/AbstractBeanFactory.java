@@ -38,7 +38,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * 作为 BeanFactory接口的实现，本抽象类 继承了 FactoryBeanRegistrySupport，
  * 实现了 ConfigurableBeanFactory接口。
  * <p>
- * 循环依赖问题的解决{@code doGetBean}。
+ * 循环依赖问题的解决 {@link #doGetBean(String, Class, Object[], boolean)}。
  * <p>
  * Dereference：译为 解引用、间接引用；根据 引用 获取 资源(resource)或值(value)。
  * <p>
