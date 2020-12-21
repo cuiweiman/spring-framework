@@ -16,16 +16,15 @@
 
 package org.springframework.beans.factory.xml;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.BeanDefinitionHolder;
+import org.springframework.lang.Nullable;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.BeanDefinitionHolder;
-import org.springframework.lang.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Support class for implementing custom {@link NamespaceHandler NamespaceHandlers}.
@@ -38,9 +37,9 @@ import org.springframework.lang.Nullable;
  *
  * @author Rob Harrop
  * @author Juergen Hoeller
- * @since 2.0
  * @see #registerBeanDefinitionParser(String, BeanDefinitionParser)
  * @see #registerBeanDefinitionDecorator(String, BeanDefinitionDecorator)
+ * @since 2.0
  */
 public abstract class NamespaceHandlerSupport implements NamespaceHandler {
 
@@ -64,23 +63,36 @@ public abstract class NamespaceHandlerSupport implements NamespaceHandler {
 
 
 	/**
+	 * 寻找 Element 解析器，并进行元素解析。
+	 * 使用 自定义的 Element 解析器{@link BeanDefinitionParser}，解析指定的 Element 元素标签
+	 * <p>
 	 * Parses the supplied {@link Element} by delegating to the {@link BeanDefinitionParser} that is
 	 * registered for that {@link Element}.
 	 */
 	@Override
 	@Nullable
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
+		// 寻找 Element 关联的解析器 BeanDefinitionParser
 		BeanDefinitionParser parser = findParserForElement(element, parserContext);
+		// 如果找到了解析器，那么进行解析，如果没找到，直接返回 null
 		return (parser != null ? parser.parse(element, parserContext) : null);
 	}
 
 	/**
+	 * 寻找 Element 解析器，并进行元素解析。
 	 * Locates the {@link BeanDefinitionParser} from the register implementations using
 	 * the local name of the supplied {@link Element}.
 	 */
 	@Nullable
 	private BeanDefinitionParser findParserForElement(Element element, ParserContext parserContext) {
+		// 获取 元素名称，也就是 自定义标签 <custom:user> 中的 user（custom定义在xmlns）
 		String localName = parserContext.getDelegate().getLocalName(element);
+		/*
+		根据 元素名称，从容器中寻找 对应的 自定义的解析器 。
+		是什么时候放进去的呢？
+		在案例 {@see https://github.com/cuiweiman/wang-wen-jun#com.wang.think.customeralias}中，映射关系配置在
+		{@see com.wang.think.customeralias.MyNamespaceHandler#init}方法中：registerBeanDefinitionParser("user", new UserBeanDefinitionParser());
+		 */
 		BeanDefinitionParser parser = this.parsers.get(localName);
 		if (parser == null) {
 			parserContext.getReaderContext().fatal(
@@ -113,11 +125,9 @@ public abstract class NamespaceHandlerSupport implements NamespaceHandler {
 		String localName = parserContext.getDelegate().getLocalName(node);
 		if (node instanceof Element) {
 			decorator = this.decorators.get(localName);
-		}
-		else if (node instanceof Attr) {
+		} else if (node instanceof Attr) {
 			decorator = this.attributeDecorators.get(localName);
-		}
-		else {
+		} else {
 			parserContext.getReaderContext().fatal(
 					"Cannot decorate based on Nodes of type [" + node.getClass().getName() + "]", node);
 		}
