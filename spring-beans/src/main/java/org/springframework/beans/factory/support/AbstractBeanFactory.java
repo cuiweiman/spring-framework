@@ -38,7 +38,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * 作为 BeanFactory接口的实现，本抽象类 继承了 FactoryBeanRegistrySupport，
  * 实现了 ConfigurableBeanFactory接口。
  * <p>
- * 循环依赖问题的解决 {@link #doGetBean(String, Class, Object[], boolean)}。
+ * 实例化加载bean对象，解决循环依赖问题的主要方法： {@link #doGetBean(String, Class, Object[], boolean)}。
  * <p>
  * Dereference：译为 解引用、间接引用；根据 引用 获取 资源(resource)或值(value)。
  * <p>
@@ -257,7 +257,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * <p>
 	 * Bean加载步骤大致如下：
 	 * <p>
-	 * 1. 处理转换 beanName：传入的 name 可能是别名，也可能是 FactoryBean 名称，因此需要进行一系列解析，解析内容包括如下内容：
+	 * 1. 处理转换 beanName：传入的 name 可能是别名，也可能是 {@link FactoryBean} 的名称，因此需要进行一系列解析，解析内容包括如下内容：
 	 * a. 去除 FactoryBean 的修饰符，即如果存在 name="&aa"，那么会首先去除 & 符号，使 name="aa".
 	 * b. 从 alias-beanName映射容器 中取出指定 alias 所表示的 BeanName，如果别名A指向名称为B的bean，则返回B；若别名A指向别名B，
 	 * 别名B又指向名称为C的bean，那么最终返回的是 C

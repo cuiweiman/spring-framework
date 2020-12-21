@@ -234,6 +234,11 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 
 	/**
 	 * 根据 BeanName 获取单例对象
+	 * <p>
+	 * 检查 缓存中 或者 实例工厂 中 是否有 对应的 单例 实例对象。
+	 * 为什么首先使用这段代码呢？因为在创建单例 Bean 的时候会存在依赖注入的情况，而在创建依赖时为了避免循环依赖，Spring 创建
+	 * bean 的原则是不等 Bean 创建完成就会将创建 Bean的 ObjectFactory 提前曝光，也就是将 ObjectFactory 加入到缓存中，
+	 * 一旦下一个 Bean 创建时需要依赖上个 Bean，则直接使用 缓存中的 ObjectFactory。
 	 *
 	 * @param beanName the name of the bean to look for
 	 * @return 例对象
@@ -241,11 +246,28 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	@Override
 	@Nullable
 	public Object getSingleton(String beanName) {
+		// 参数 true，设置标识为 允许早期依赖
 		return getSingleton(beanName, true);
 	}
 
 	/**
 	 * 根据给定 BeanName，从 单例对象池 singletonObjects 中返回单例对象实例
+	 * <p>
+	 * 检查 缓存中 或者 实例工厂 中 是否有 对应的 单例 实例对象。
+	 * 为什么首先使用这段代码呢？因为在创建单例 Bean 的时候会存在依赖注入的情况，而在创建依赖时为了避免循环依赖，Spring 创建
+	 * bean 的原则是不等 Bean 创建完成就会将创建 Bean的 ObjectFactory 提前曝光，也就是将 ObjectFactory 加入到缓存中，
+	 * 一旦下一个 Bean 创建时需要依赖上个 Bean，则直接使用 缓存中的 ObjectFactory。
+	 * <p>
+	 * 首先尝试从 singletonObjects 里获取实例，获取不到时再从 earlySingletonObjects 中获取；如果仍然获取不到，
+	 * 再尝试从 singletonFactories 中获取 beanName 对应的 ObjectFactory，再利用 {@link ObjectFactory#getObject()} 方法创建bean，
+	 * 并放到 earlySingletonObjects 容器中，再从 singletonFactories 容器里 remove 掉这个 ObjectFactory。
+	 * 而对于这两个容器的内存操作，都是为了循环依赖检测的时候使用，也就是在 allowEarlyReference 为true的情况下才会使用。
+	 * <p>
+	 * {@link #singletonObjects}:保存 BeanName 和 bean实例 之间的映射关系 bean name——>bean instance；
+	 * {@link #singletonFactories}:保存 BeanName 和 bean工厂 之间的映射关系 bean name——>ObjectFactory；
+	 * {@link #earlySingletonObjects}:保存 BeanName 和 bean实例 之间的映射关系；与 singletonObjects 的不同之处在于，
+	 * 若单例 bean 被放到该容器中，表示该bean 尚在创建过程中，可以通过 getBean 方法获取到， 目的是用来检测 循环引用。
+	 * {@link #registeredSingletons}:保存当前 所有 已经注册过的 bean 的 beanName（按照注册的顺序）
 	 * <p>
 	 * Return the (raw) singleton object registered under the given name.
 	 * <p>Checks already instantiated singletons and also allows for an early
@@ -258,13 +280,15 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
 		// Quick check for existing instance without full singleton lock
+		// 检查缓存中是否存在实例
 		Object singletonObject = this.singletonObjects.get(beanName);
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			// 单例对象池中不存在，但是 BeanName对应的单例对象 当前正在创建中，那么从 早期单例对象池 中获取单例对象
+			// 若 此bean 正在加载，则不进行处理，即 从 早起单例对象池 中获取到的单例对象 不为 null
 			singletonObject = this.earlySingletonObjects.get(beanName);
 			if (singletonObject == null && allowEarlyReference) {
 				// 早期单例对象池 中也没有，但是 allowEarlyReference=true，即 允许创建早期对象实例
-				// 首先，拿到单例对象锁
+				// 首先，拿到单例对象锁，如果 singletonObject为null，锁定全局变量并进行处理
 				synchronized (this.singletonObjects) {
 					// 再次从单例对象池中取对象，因为当前正在创建的对象可能已经创建好了。如果仍然拿不到，说明还没有创建好
 					// 此时synchronized会锁住当前单例对象，占住资源不被 创建单例对象的线程使用。
@@ -274,12 +298,20 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 						// 从 早期单例对象池中 取出单例对象
 						singletonObject = this.earlySingletonObjects.get(beanName);
 						if (singletonObject == null) {
+							/*
+							 某些方法需要提前初始化时，会调用 addSingletonFactory 方法将对应的 ObjectFactory
+							 初始化策略存储在 singletonFactories 中
+							 */
 							// 早期单例池中 也不存在单例对象，那么从单例对象工厂池中获取单例对象创建工厂对象
 							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 							if (singletonFactory != null) {
-								// 使用 单例对象工厂 构造对象，然后将对象 添加到 早期对象缓存池中，
-								// 并将单例对象工厂从工厂容器中移除,然后 返回刚创建好的 单例对象
+								// 调用预先设定的 getObject 方法
+								/*
+								使用 单例对象工厂 构造对象，然后将对象 添加到 早期对象缓存池中，
+								并将单例对象工厂从工厂容器中移除,然后 返回刚创建好的 单例对象
+								*/
 								singletonObject = singletonFactory.getObject();
+								// 记录到 缓存中，earlySingletonObjects 容器与 singletonFactories 容器互斥
 								this.earlySingletonObjects.put(beanName, singletonObject);
 								this.singletonFactories.remove(beanName);
 							}
