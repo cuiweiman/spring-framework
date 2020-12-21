@@ -405,7 +405,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 
 
 	/**
-	 * 从指定 XML 文件中 加载 BeanDefinition 的真是方法：
+	 * 从指定 XML 文件中 加载 BeanDefinition 的真实方法：
 	 * 1. 加载XML文件，并得到对应的Document；
 	 * 2. 根据返回的Document 注册 Bean 信息（非常复杂）。
 	 * <p>
@@ -594,7 +594,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 		// 在实例化 BeanDefinitionReader 时会将 BeanDefinitionRegistry 传入，默认使用继承自 DefaultListableBeanFactory 的子类
 		// 记录统计 当前 BeanDefinition 的加载个数
 		int countBefore = getRegistry().getBeanDefinitionCount();
-		// 加载及注册 Bean
+		// 解析XML，加载并注册 BeanDefinition
 		documentReader.registerBeanDefinitions(doc, createReaderContext(resource));
 		// 几率本次 加载的 BeanDefinition 个数
 		return getRegistry().getBeanDefinitionCount() - countBefore;
