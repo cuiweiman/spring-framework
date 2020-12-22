@@ -62,7 +62,8 @@ public abstract class BeanFactoryUtils {
 
 
 	/**
-	 * 判断 给定的 BeanName 是否是 Factory的间接引用
+	 * 判断 给定的 BeanName 是否是 Factory的间接引用：name 以 & 开头
+	 *
 	 * Return whether the given name is a factory dereference
 	 * (beginning with the factory dereference prefix).
 	 *

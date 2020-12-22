@@ -402,6 +402,18 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		return result;
 	}
 
+	/**
+	 * 后处理器。在Spring 获取 bean的规则中有一条：尽可能保证所有 bean 初始化后都会调用 注册的
+	 * BeanPostProcessor 的 postProcessorAfterInitialization 方法进行处理，实际开发中可以此特性设计 需要的 后置处理业务逻辑。
+	 *
+	 * @param existingBean the existing bean instance
+	 * @param beanName     the name of the bean, to be passed to it if necessary
+	 *                     (only passed to {@link BeanPostProcessor BeanPostProcessors};
+	 *                     can follow the {@link #ORIGINAL_INSTANCE_SUFFIX} convention in order to
+	 *                     enforce the given instance to be returned, i.e. no proxies etc)
+	 * @return 结果
+	 * @throws BeansException 异常
+	 */
 	@Override
 	public Object applyBeanPostProcessorsAfterInitialization(Object existingBean, String beanName)
 			throws BeansException {

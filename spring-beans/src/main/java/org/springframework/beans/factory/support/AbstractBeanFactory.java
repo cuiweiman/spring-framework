@@ -330,7 +330,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					logger.trace("Returning cached instance of singleton bean '" + beanName + "'");
 				}
 			}
-			// 如果是普通 bean，直接返回；如果是 FactoryBean，返回 FactoryBean 创建出来的 Bean
+			// 如果是普通 bean，直接返回；如果是 FactoryBean，返回 FactoryBean 创建出来的 Bean；如果传入的name 以 & 为前缀，那么返回 FactoryBean 对象
 			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
 		} else {
 			// Bean还没有被创建或者有构造参数，那么直接创建 bean
@@ -1614,7 +1614,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 
 	/**
-	 * 从 合并后的 BeanDefinition 中 获取 RootBeanDefinition。
+	 * 将存储了XML配置的 bean definition 信息的 GenericBeanDefinition 转换为 RootBeanDefinition 类型
+	 * 如果指定 beanName 是一个 子Bean 的话，会同时合并 父类的相关属性。
 	 * <p>
 	 * Return a merged RootBeanDefinition, traversing the parent bean definition
 	 * if the specified bean corresponds to a child bean definition.
@@ -2166,8 +2167,19 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
-	 * 获取给定的 bean实例，可以是这个Bean的实例，如果这个Bean是一个FactoryBean，
-	 * 那就返回FactoryBean创建出来的Bean实例。
+	 * 判断参数给定的 beanInstance 是否是 FactoryBean。
+	 * 如果不是，则直接返回；如果是，那么调用 {@link FactoryBean#getObject()} 方法 获取到 对象实例，并返回
+	 * <p>
+	 * 无论是从缓存中拿到的 bean，还是通过不同的scope策略加载到的 bean，都只是最原始的 bean 状态，并不一定是最终想要的 bean。例如：
+	 * 加入我们需要对工厂 bean 进行处理，那么这里得到的其实是工厂 bean 的初始状态，但是我们真正需要的是工厂 bean 中定义的 factory-method 方法
+	 * 中返回的 bean，而 本方法 就是完成这个工作的。先判断是不是 FactoryBean，再完成下一个工作。
+	 * <p>
+	 * 本方法所做的工作：
+	 * 1. 判断用户想要的是一个 Bean类型对象 还是一个 FactoryBean 类型对象。如果用户想要 FactoryBean 类型，那么入参 name 应该有 & 前缀，
+	 * 并且处理后返回 FactoryBean 类型对象实例。
+	 * 2. 如果用户想要 Bean类型实例，那么判断 参数给定的 beanInstance 是否是一个 普通的 Bean 实例，如果是，那么直接返回。
+	 * 3. 如果不是，那么可能是 FactoryBean 类型实例，经过判断和处理后，将 beanInstance 转换为 FactoryBean 类型对象。
+	 * 4. 从 FactoryBean 中解析出 Bean 对象实例，这个过程委托给了 {@link #getObjectFromFactoryBean(FactoryBean, String, boolean)}
 	 * <p>
 	 * Get the object for the given bean instance, either the bean
 	 * instance itself or its created object in case of a FactoryBean.
@@ -2182,35 +2194,42 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			Object beanInstance, String name, String beanName, @Nullable RootBeanDefinition mbd) {
 
 		// Don't let calling code try to dereference the factory if the bean isn't a factory.
-		// 如果 Bean 不是一个工厂，不要让调用的代码取消对工厂的引用
-		// 如果 beanName 是 & 开头的，这个 bean 一定是 Factory 的间接引用
+		/*
+		如果 name 是 & 开头的，说明想要 获取到的 是一个 工厂实例，即 FactoryBean 类型对象。
+		那么如果校验 beanInstance 的确是一个 工厂类型 之后，就可以直接返回了。
+		 */
 		if (BeanFactoryUtils.isFactoryDereference(name)) {
 			if (beanInstance instanceof NullBean) {
 				return beanInstance;
 			}
 			if (!(beanInstance instanceof FactoryBean)) {
+				// name 以 & 开头，但又不是 FactoryBean 类型的，抛出异常
 				throw new BeanIsNotAFactoryException(beanName, beanInstance.getClass());
 			}
 			if (mbd != null) {
+				// 修改 bean definition 中标识，表明这个 BeanDefinition 是一个 FactoryBean 类型的
 				mbd.isFactoryBean = true;
 			}
 			return beanInstance;
 		}
+		/*
+		Now we have the bean instance, which may be a normal bean or a FactoryBean.
+		If it's a FactoryBean, we use it to create a bean instance, unless the
+		caller actually wants a reference to the factory.
 
-		// Now we have the bean instance, which may be a normal bean or a FactoryBean.
-		// If it's a FactoryBean, we use it to create a bean instance, unless the
-		// caller actually wants a reference to the factory.
-		// 现在，beanInstance 是一个普通的 Bean实例，或者是一个 FactoryBean 实例。
-		// 如果是 FactoryBean，那我们用它创建出 Bean实例，除非调用者实际上是想要一个 factory 的引用。
+		走到这一步，说明 想要的 不是一个 FactoryBean 类型的对象，而是一个 Bean 类型的对象实例。
+		如果是普通的 bean 实例，可以直接返回；如果是 FactoryBean，那我们要用它创建出 Bean 实例后 再返回。
+		*/
+
 		if (!(beanInstance instanceof FactoryBean)) {
 			// beanInstance 实例 是一个 普通的 Bean
 			return beanInstance;
 		}
 
-		// beanInstance 实例 是一个 FactoryBean
+		// beanInstance 实例 是一个 FactoryBean 类型对象。首先 加载 FactoryBean 对象。
 		Object object = null;
 		if (mbd != null) {
-			// 有传递 RootBeanDefinition 参数，设定 参数的 FactoryBean 属性 标识为true
+			// 有传递 RootBeanDefinition 参数，设定 其 FactoryBean 属性标识为true
 			mbd.isFactoryBean = true;
 		} else {
 			// mbd==null，从 FactoryBean对象缓存池 中 获取 FactoryBean 对象实例
@@ -2218,12 +2237,15 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		}
 		if (object == null) { // 说明 参数 mbd != null
 			// Return bean instance from factory.
-			// 从 FactoryBean 中创建 Bean实例 并返回
+			// 到这里已经明确知道，beanInstance 一定是一个 FactoryBean 类型的。从 FactoryBean 中创建 Bean实例 并返回
 			FactoryBean<?> factory = (FactoryBean<?>) beanInstance;
 			// Caches object obtained from FactoryBean if it is a singleton.
 			if (mbd == null && containsBeanDefinition(beanName)) {
+				// 将存储了XML配置的 bean definition 信息的 GenericBeanDefinition 转换为 RootBeanDefinition，
+				// 如果指定 beanName 是一个 子Bean 的话，会同时合并 父类的相关属性。
 				mbd = getMergedLocalBeanDefinition(beanName);
 			}
+			// bean definition 是否是 用户配置的，而不是程序本身定义的
 			boolean synthetic = (mbd != null && mbd.isSynthetic());
 			object = getObjectFromFactoryBean(factory, beanName, !synthetic);
 		}

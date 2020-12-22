@@ -1140,6 +1140,8 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	}
 
 	/**
+	 * 判断 bean definition 是否是 'synthetic' 的，即 是用户定义的而不是程序本身定义的。默认false
+	 * <p>
 	 * Return whether this bean definition is 'synthetic', that is,
 	 * not defined by the application itself.
 	 */
