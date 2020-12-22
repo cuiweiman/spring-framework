@@ -280,10 +280,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
 		// Quick check for existing instance without full singleton lock
-		// 检查缓存中是否存在实例
+		// 检查缓存中是否存在实例，若存在则直接返回
 		Object singletonObject = this.singletonObjects.get(beanName);
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
-			// 单例对象池中不存在，但是 BeanName对应的单例对象 当前正在创建中，那么从 早期单例对象池 中获取单例对象
+			// 单例对象池中不存在，但是 BeanName对应的单例对象 当前正在创建中，那么从 早期单例对象池 中获取单例对象 并 直接返回
 			// 若 此bean 正在加载，则不进行处理，即 从 早起单例对象池 中获取到的单例对象 不为 null
 			singletonObject = this.earlySingletonObjects.get(beanName);
 			if (singletonObject == null && allowEarlyReference) {
@@ -291,7 +291,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				// 首先，拿到单例对象锁，如果 singletonObject为null，锁定全局变量并进行处理
 				synchronized (this.singletonObjects) {
 					// 再次从单例对象池中取对象，因为当前正在创建的对象可能已经创建好了。如果仍然拿不到，说明还没有创建好
-					// 此时synchronized会锁住当前单例对象，占住资源不被 创建单例对象的线程使用。
+					// 此时synchronized会锁住当前单例对象，占住资源不被 创建单例对象的线程使用。如果拿到了，则 直接返回
 					// Consistent creation of early reference within full singleton lock
 					singletonObject = this.singletonObjects.get(beanName);
 					if (singletonObject == null) {
@@ -320,6 +320,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				}
 			}
 		}
+		// 若单例对象池中存在，则直接返回；弱不存在，则尝试 查找和处理后 再返回
 		return singletonObject;
 	}
 
