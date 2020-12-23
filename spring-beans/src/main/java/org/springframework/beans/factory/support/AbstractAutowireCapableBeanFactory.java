@@ -405,6 +405,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	/**
 	 * 后处理器。在Spring 获取 bean的规则中有一条：尽可能保证所有 bean 初始化后都会调用 注册的
 	 * BeanPostProcessor 的 postProcessorAfterInitialization 方法进行处理，实际开发中可以此特性设计 需要的 后置处理业务逻辑。
+	 * <p>
+	 * 因为如果返回的 bean 不为空，那么便不会再次经历普通 bean 的创建过程，所以只能在这里应用
+	 * 后处理器的 postProcessAfterInitialization 方法 {@link BeanPostProcessor#postProcessAfterInitialization}
 	 *
 	 * @param existingBean the existing bean instance
 	 * @param beanName     the name of the bean, to be passed to it if necessary
@@ -1105,6 +1108,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * bean 实例化的前置处理，解析指定的 bean 是否存在 实例化前的 快捷方式。
+	 * <p>
 	 * Apply before-instantiation post-processors, resolving whether there is a
 	 * before-instantiation shortcut for the specified bean.
 	 *
@@ -1120,18 +1125,26 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 				Class<?> targetType = determineTargetType(beanName, mbd);
 				if (targetType != null) {
+					// 实例化前的 后处理器应用
 					bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
 					if (bean != null) {
+						// 实例化后的 后处理器应用
 						bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
 					}
 				}
 			}
+			// 如果 bean != null，说明 mbd 被处理过了，做一个标识，下次可以直接跳过处理逻辑，类似于 电线短路
 			mbd.beforeInstantiationResolved = (bean != null);
 		}
 		return bean;
 	}
 
 	/**
+	 * bean的实例化前嗲用，即将 AbstractBeanDefinition 转换为 BeanWrapper 前的处理。
+	 * <p>
+	 * 给子类一个修改 BeanDefinition 的机会，即当程序经过这个方法后，bean 可能已经不是我们认为的 bean了，或许变成了一个 经过处理的
+	 * 代理 bean，可能是通过 cglib 生成的，也可能是通过其他技术生成的。
+	 * <p>
 	 * Apply InstantiationAwareBeanPostProcessors to the specified bean definition
 	 * (by class and name), invoking their {@code postProcessBeforeInstantiation} methods.
 	 * <p>Any returned object will be used as the bean instead of actually instantiating

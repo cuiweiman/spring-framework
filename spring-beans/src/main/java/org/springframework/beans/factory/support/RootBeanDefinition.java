@@ -136,6 +136,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	boolean postProcessed = false;
 
 	/**
+	 * 包可见字段，指示 实例化 的 前置处理 已经启动过了
 	 * Package-visible field that indicates a before-instantiation post-processor having kicked in.
 	 */
 	@Nullable
