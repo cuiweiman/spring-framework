@@ -137,6 +137,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 								// Temporarily return non-post-processed object, not storing it yet..
 								return object;
 							}
+							// 单例对象创建 前置方法
 							beforeSingletonCreation(beanName);
 							try {
 								// 调用 ObjectFactory 的 后处理器
@@ -145,6 +146,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 								throw new BeanCreationException(beanName,
 										"Post-processing of FactoryBean's singleton object failed", ex);
 							} finally {
+								// 单例对象创建 后置方法
 								afterSingletonCreation(beanName);
 							}
 						}
