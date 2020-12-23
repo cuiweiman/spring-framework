@@ -327,6 +327,18 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/**
 	 * 根据给定 BeanName，从 单例对象池 singletonObjects 中返回单例对象实例
 	 * <p>
+	 * 本方法中使用了回调函数，使得单例创建的前后做一些准备以及处理操作，而真正获取 单例bean
+	 * 的逻辑在 {@link ObjectFactory#getObject()} 方法中实现。
+	 * <p>
+	 * 1. 检查缓存中是否已经加载过了 单例bean 对象。若从缓存中拿到了单例对象，那么直接返回；如果没拿到，那么进行下一步处理；
+	 * 2. 调用 {@link #beforeSingletonCreation(String)} 判断 beanName 是否需要被检查，然后 记录加载状态为 正在实例化
+	 * （添加到 singletonsCurrentlyInCreation 容器中，便于检测 循环依赖）
+	 * 3. 调用 {@link ObjectFactory#getObject()} 实例化 bean。
+	 * 4. 调用  {@link #afterSingletonCreation(String)},移除 正在实例化 的加载状态，表示实例化完成。
+	 * 5. 调用 {@link #addSingleton(String, Object)}，将实例化后的 单例 bean 加入到 单例bean 缓存池中。最后返回 bean 实例。
+	 * <p>
+	 * （从 singletonsCurrentlyInCreation 容器中移除）
+	 * <p>
 	 * Return the (raw) singleton object registered under the given name,
 	 * creating and registering a new one if none registered yet.
 	 *
@@ -337,11 +349,14 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(beanName, "Bean name must not be null");
-		// 对 单例对象缓存池 加锁
+		// 对 单例对象缓存池(全局变量) 加锁
 		synchronized (this.singletonObjects) {
+			/*
+			首先检查 对应的 单例 bean 是否已经加载过了，因为 singleton 模式要保证 全局唯一，不能重复创建
+			 */
 			// 从缓存池中 获取指定 BeanName 的单例对象
 			Object singletonObject = this.singletonObjects.get(beanName);
-			// 取出的单例对象为null，目前，在 单例对象缓存池 中不存在该单例对象
+			// 取出的 单例对象为 null，这时才需要创建；否则 直接返回 singletonObject
 			if (singletonObject == null) {
 				if (this.singletonsCurrentlyInDestruction) {
 					// 单例对象正在销毁
@@ -352,16 +367,16 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				if (logger.isDebugEnabled()) {
 					logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
 				}
-				// 创建 BeanName 实例前调用，
+				// 单例对象的创建——前置函数
 				beforeSingletonCreation(beanName);
 				boolean newSingleton = false;
-				// 异常集合是否为null，true-为null，则初始化 suppressedExceptions。
+				// 异常集合是否为 null，如果是 true，表示为null，要初始化 suppressedExceptions。
 				boolean recordSuppressedExceptions = (this.suppressedExceptions == null);
 				if (recordSuppressedExceptions) {
 					this.suppressedExceptions = new LinkedHashSet<>();
 				}
 				try {
-					// 从给定的 对象工厂中生成单例对象实例
+					// 初始化 bean：从给定的 对象工厂 中生成单例对象实例
 					singletonObject = singletonFactory.getObject();
 					newSingleton = true;
 				} catch (IllegalStateException ex) {
@@ -385,11 +400,12 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					if (recordSuppressedExceptions) {
 						this.suppressedExceptions = null;
 					}
+					// 单例对象的创建 —— 后置函数
 					// 单例对象创建后调用，若需要检查，那么从 当前正在创建的单例对象 缓存池中移除对应的BeanName
 					afterSingletonCreation(beanName);
 				}
 				if (newSingleton) {
-					// 新对象创建成功，注册 BeanName 和 对象实例 到 Bean容器中
+					// 如果是 新对象，加入到缓存池中：注册 BeanName 和 单例对象实例 到 单例Bean容器中
 					addSingleton(beanName, singletonObject);
 				}
 			}
@@ -519,6 +535,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * 在单例对象创建前 调用。
 	 * 若 创建检查中排除的BeanName集合中不存在（说明需要检查），
 	 * 且 当前正在创建的BeanName集合 添加 BeanName 失败，则抛出异常。
+	 * <p>
+	 * 判断 beanName 是检查后，记录 beanName 为 正在加载的状态（添加到 singletonsCurrentlyInCreation 容器中）
 	 * <p>
 	 * Callback before singleton creation.
 	 * <p>The default implementation register the singleton as currently in creation.

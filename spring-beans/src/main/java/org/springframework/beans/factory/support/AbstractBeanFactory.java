@@ -421,9 +421,21 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// Create bean instance.——单例 Bean。依赖的bean创建好之后，实例化 mdb 本身
 				if (mbd.isSingleton()) {
 					// singleton 模式的创建。这里使用了一个匿名内部类，创建Bean实例对象，并且注册给所依赖的对象
+					/*根据 DefaultSingletonBeanRegistry#getSingleton方法，
+					反推参数：sharedInstance = getSingleton(beanName, new ObjectFactory<Object>()
+					下面 这个 代码块，是我为了理解，自己加的*/
+					/*
+						sharedInstance = getSingleton(beanName, new ObjectFactory<Object>() {
+							@Override
+							public Object getObject() throws BeansException {
+								return createBean(beanName, mbd, args);
+							}
+						});
+					*/
+
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
-							// 创建 Bean，如果有父级继承，则合并子类和父类的定义
+							// 创建 Bean，如果有父级继承，则合并子类和父类的定义。核心是调用了 ObjectFactory#getObject 方法
 							return createBean(beanName, mbd, args);
 						} catch (BeansException ex) {
 							// Explicitly remove instance from singleton cache: It might have been put there
