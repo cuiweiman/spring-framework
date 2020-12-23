@@ -436,6 +436,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
 							// 创建 Bean，如果有父级继承，则合并子类和父类的定义。核心是调用了 ObjectFactory#getObject 方法
+							// {@link AbstractAutowireCapableBeanFactory#createBean}
 							return createBean(beanName, mbd, args);
 						} catch (BeansException ex) {
 							// Explicitly remove instance from singleton cache: It might have been put there

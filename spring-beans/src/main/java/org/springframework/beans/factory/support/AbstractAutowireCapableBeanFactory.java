@@ -461,9 +461,25 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	//---------------------------------------------------------------------
 
 	/**
+	 * 创建 bean（规律：真正干活儿的函数其实是以 do* 开头的，get* 函数通常是从全局的角度做一些 统筹工作）
+	 * <p>
+	 * 1. 根据 设置的 class 属性或者根据 className 解析出 Class；
+	 * 2. 对 override 属性进行 标记和验证；override：Spring的配置中有 <lookup-method>和<replace-method>标签，
+	 * 可以重写或者替代目标类，这个操作就是针对这两个配置的。{@link AbstractBeanDefinition#prepareMethodOverrides}。
+	 * 3. bean 实例化的前置处理：调用 {@link #resolveBeforeInstantiation(String, RootBeanDefinition)} 方法。
+	 * 4. 调用 {@link #doCreateBean(String, RootBeanDefinition, Object[])}，创建 bean 实例。
+	 * <p>
+	 * 真正干活儿的还得看 {@link #doCreateBean(String, RootBeanDefinition, Object[])},本方法只是
+	 * 做一些 创建 bean 之前需要的统筹工作和准备工作
+	 * <p>
 	 * Central method of this class: creates a bean instance,
 	 * populates the bean instance, applies post-processors, etc.
 	 *
+	 * @param beanName the name of the bean ；bean 名称
+	 * @param mbd      the merged bean definition for the bean；bean 的根定义
+	 * @param args     explicit arguments to use for constructor or factory method invocation；构造参数的值。
+	 * @return bean对象
+	 * @throws BeanCreationException 创建异常
 	 * @see #doCreateBean
 	 */
 	@Override
@@ -478,13 +494,23 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// Make sure bean class is actually resolved at this point, and
 		// clone the bean definition in case of a dynamically resolved Class
 		// which cannot be stored in the shared merged bean definition.
+		// 确保此时 bean class 已经被解析了；
+		// 万一动态解析的类不能被存储在 mergedBeanDefinition中，就克隆 bean definition。
+		/*
+		将给定的 BeanDefinition 解析成 Bean Class，如果有必要，将 BeanClass Name
+		处理成 Class 引用，并且存入 BeanDefinition 以便后期使用。
+		 */
+		// 指定 class，根据 class 属性 或者 className 来解析出 class。
 		Class<?> resolvedClass = resolveBeanClass(mbd, beanName);
 		if (resolvedClass != null && !mbd.hasBeanClass() && mbd.getBeanClassName() != null) {
+			// 解析出了 当前 BeanDefinition 的 Class 类型，并且 RootBeanDefinition 中没有指定 beanClass，
+			// 并且当前 RootBeanDefinition 存在 类型名（eg："java.lang.String"），
+			// 则为 RootBeanDefinition 指定 Class 类型为 resolvedClass
 			mbdToUse = new RootBeanDefinition(mbd);
 			mbdToUse.setBeanClass(resolvedClass);
 		}
 
-		// Prepare method overrides.
+		// Prepare method overrides. 验证 并准备 子类重写的方法 的覆盖（Overrides）
 		try {
 			mbdToUse.prepareMethodOverrides();
 		} catch (BeanDefinitionValidationException ex) {
@@ -493,6 +519,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
+			// bean 实例化的前置处理：给 BeanPostProcessors 一个机会，返回一个代理对象，用来代替真正的实例对象。成功获取到，则直接返回代理对象。
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {

@@ -488,6 +488,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	}
 
 	/**
+	 * 返回 当前 bean definition 的 class 类型名
 	 * Return the current bean class name of this bean definition.
 	 */
 	@Override
@@ -545,6 +546,8 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	}
 
 	/**
+	 * 本 definition 中是否 指定了 bean 的 class 类型
+	 * <p>
 	 * Return whether this definition specifies a bean class.
 	 *
 	 * @see #getBeanClass()
@@ -1256,6 +1259,9 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	}
 
 	/**
+	 * 对 override 属性进行 标记和验证；override：Spring的配置中有 <lookup-method>和<replace-method>标签，
+	 * 可以重写或者替代目标类，这个操作就是针对这两个配置的。
+	 * <p>
 	 * Validate and prepare the method overrides defined for this bean.
 	 * Checks for existence of a method with the specified name.
 	 *
@@ -1263,12 +1269,25 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 */
 	public void prepareMethodOverrides() throws BeanDefinitionValidationException {
 		// Check that lookup methods exist and determine their overloaded status.
+		// 检查 lookup methods 是否存在并确定其重载状态。
 		if (hasMethodOverrides()) {
+			/*
+			1. getMethodOverrides()：首先 获取 方法重写的 持有者 ，对应 <bean> 标签 下的 <lookup-method>、<replaced-method> 子标签。
+			2. getOverrides()：获取 methodOverrides 的 overrides 容器属性，容器中缓存了所有的 MethodOverride
+			3. 遍历集合，循环调用 prepareMethodOverride() 方法
+			 */
 			getMethodOverrides().getOverrides().forEach(this::prepareMethodOverride);
 		}
 	}
 
 	/**
+	 * 检验并准备 需要重写的方法。
+	 * 检查 指定的 method 是否有重载的方法，如果找不到，则将其标记为 未重载。
+	 * <p>
+	 * Spring 配置在XML 的两个标签 <lookup-method>和<replace-method>，加载后统一存放在
+	 * {@link #methodOverrides}属性中。在bean 实例化时检测 methodOverrides 属性，如果存在内容，则动态地为当前 bean
+	 * 生成代理 并使用对应的拦截器为 bean 做增强处理，相关逻辑实现在 bean 的实例化部分介绍。
+	 * <p>
 	 * Validate and prepare the given method override.
 	 * Checks for existence of a method with the specified name,
 	 * marking it as not overloaded if none found.
@@ -1277,12 +1296,14 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * @throws BeanDefinitionValidationException in case of validation failure
 	 */
 	protected void prepareMethodOverride(MethodOverride mo) throws BeanDefinitionValidationException {
+		// 获取 对应类中 对应方法名 的个数
 		int count = ClassUtils.getMethodCountForName(getBeanClass(), mo.getMethodName());
 		if (count == 0) {
 			throw new BeanDefinitionValidationException(
 					"Invalid method override: no method with name '" + mo.getMethodName() +
 							"' on class [" + getBeanClassName() + "]");
 		} else if (count == 1) {
+			// 当前类中只有一个方法，标记 MethodOverride 暂未被覆盖，避免参数类型检查的开销
 			// Mark override as not overloaded, to avoid the overhead of arg type checking.
 			mo.setOverloaded(false);
 		}
