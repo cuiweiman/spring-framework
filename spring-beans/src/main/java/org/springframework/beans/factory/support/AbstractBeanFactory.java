@@ -39,6 +39,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * 实现了 ConfigurableBeanFactory接口。
  * <p>
  * 实例化加载bean对象，解决循环依赖问题的主要方法： {@link #doGetBean(String, Class, Object[], boolean)}。
+ * 循环依赖的介绍以及Spring的处理：{https://github.com/cuiweiman/wang-wen-jun # com.wang.think.circulardependence}
  * <p>
  * Dereference：译为 解引用、间接引用；根据 引用 获取 资源(resource)或值(value)。
  * <p>
@@ -283,7 +284,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * 7. 寻找依赖：bean初始化过程中可能会依赖其他属性，需要先加载依赖的bean，所以在Spring的加载顺序中，初始化bean时会首先初始化该bean依赖的bean。
 	 * <p>
 	 * 8. 针对不同的scope 进行bean的创建：Spring中默认的scope是singleton，还存在 prototype、request等，Spring要根据不同的scope
-	 * 进行不同的初始化策略。
+	 * 进行不同的初始化策略。创建 bean 的核心方法 ★★★ ： {@link #createBean(String, RootBeanDefinition, Object[])}
 	 * <p>
 	 * 9. 类型转换：创建完bean之后，可能存在情况是 入参指定的bean类型，与创建完成的bean类型 不是同一个类型，这时需要进行类型转换，
 	 * 将创建好的bean 转换成 执行的bean类型。
@@ -435,7 +436,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
-							// 创建 Bean，如果有父级继承，则合并子类和父类的定义。核心是调用了 ObjectFactory#getObject 方法
+							// 创建 Bean 的核心方法，如果有父级继承，则合并子类和父类的定义。核心是调用了 ObjectFactory#getObject 方法
 							// {@link AbstractAutowireCapableBeanFactory#createBean}
 							return createBean(beanName, mbd, args);
 						} catch (BeansException ex) {
