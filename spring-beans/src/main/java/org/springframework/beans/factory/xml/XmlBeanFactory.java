@@ -70,6 +70,7 @@ public class XmlBeanFactory extends DefaultListableBeanFactory {
 
 	/**
 	 * 真正实现资源加载的构造函数：XmlBeanDefinitionReader 进行数据加载
+	 * 将配置在XML文档中的 BeanDefinition 解析出来并添加到 Spring 容器中，以便在使用时注入
 	 * </p>
 	 * parentBeanFactory 父类的 BeanFactory，用于 Factory 的合并，可以为null。
 	 * <p>
