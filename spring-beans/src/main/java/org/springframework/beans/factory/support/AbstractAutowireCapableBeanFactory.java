@@ -1273,7 +1273,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				// 构造函数 自动注入
 				return autowireConstructor(beanName, mbd, null, null);
 			} else {
-				// 使用默认构造函数构造
+				// 使用默认构造函数构造（无参构造函数实例化过程）
 				return instantiateBean(beanName, mbd);
 			}
 		}
@@ -1295,7 +1295,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// No special handling: simply use no-arg constructor.
-		// 使用默认构造函数构造
+		// 使用默认构造函数构造（无参构造函数实例化过程）
 		return instantiateBean(beanName, mbd);
 	}
 
@@ -1380,6 +1380,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * 使用默认构造函数构造（无参构造函数实例化过程）
+	 * <p>
 	 * Instantiate the given bean using its default constructor.
 	 *
 	 * @param beanName the name of the bean
@@ -1428,6 +1430,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * “构造函数自动注入”（包括构造参数的类型）。如果明确地指定了构造函数的参数值，并且和 bean factory 中的参数完全相匹配，那么也使用此方法。
+	 * <p>这与构造函数注入相对应：在这种模式下，spring bean 工厂能够托管 期望基于构造函数的依赖关系解析的组件。
+	 * <p>
 	 * "autowire constructor" (with constructor arguments by type) behavior.
 	 * Also applied if explicit constructor argument values are specified,
 	 * matching all remaining arguments with beans from the bean factory.
