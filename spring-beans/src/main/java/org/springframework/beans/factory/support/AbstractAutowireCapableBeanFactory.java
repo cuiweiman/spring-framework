@@ -674,6 +674,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// 对 bean 进行填充，将各个属性值注入，其中可能存在 依赖于其他 bean 的属性，则会递归初始 依赖 bean
 			populateBean(beanName, mbd, instanceWrapper);
 			// 调用 初始化方法 例如：用户自定义的 init-method
+			// Spring 中程序已经执行过 Bean 的实例化，并且完成了属性填充，这时会调用 用户设定 的初始化方法。
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		} catch (Throwable ex) {
 			if (ex instanceof BeanCreationException && beanName.equals(((BeanCreationException) ex).getBeanName())) {
@@ -1929,6 +1930,16 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 
 	/**
+	 * 初始化给定的 bean实例，执行 工厂的回调方法，以及 init-method 和 bean 的后置处理器方法。
+	 * Spring中程序已经执行过 Bean 的实例化，并且完成了属性填充，这时会调用 用户设定 的初始化方法。
+	 * <p>
+	 * 1. 激活Aware。Aware的使用案例 {@see https://github.com/cuiweiman/wang-wen-jun#com.wang.think.aware}
+	 * 2. 处理器的应用。BeanPostProcessor 给与用户权限去扩展或者更改Spring，在调用客户 自定义初始化方法前 以及 调用自定义初始化方法后 会
+	 * 分别调用 {@link BeanPostProcessor#postProcessBeforeInitialization(Object, String)} 和  {@link BeanPostProcessor#postProcessAfterInitialization(Object, String)},
+	 * 方便用户根据业务需求进行相应处理。
+	 * 3. 激活用户自定义的 init 初始化方法 {@link #invokeInitMethods(String, Object, RootBeanDefinition)}。初始化方法的使用案例：
+	 * {@see https://github.com/cuiweiman/wang-wen-jun#com.wang.think.initmethod}
+	 * <p>
 	 * Initialize the given bean instance, applying factory callbacks
 	 * as well as init methods and bean post processors.
 	 * <p>Called from {@link #createBean} for traditionally defined beans,
@@ -1953,15 +1964,18 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				return null;
 			}, getAccessControlContext());
 		} else {
+			// 对特殊的 bean 处理：Aware、BeanClassLoaderAware、BeanFactoryAware
 			invokeAwareMethods(beanName, bean);
 		}
 
 		Object wrappedBean = bean;
 		if (mbd == null || !mbd.isSynthetic()) {
+			// 调用客户 自定义的初始化方法 前 执行
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
 
 		try {
+			// 应用 用户自定义的 init-method 方法
 			invokeInitMethods(beanName, wrappedBean, mbd);
 		} catch (Throwable ex) {
 			throw new BeanCreationException(
@@ -1969,6 +1983,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					beanName, "Invocation of init method failed", ex);
 		}
 		if (mbd == null || !mbd.isSynthetic()) {
+			// 调用客户 自定义的初始化方法 之后 执行
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 
@@ -1993,6 +2008,13 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * 执行 用户自定义的 bean初始化方法。
+	 * 用户自定义 bean 初始化方法 的使用案例：{@see https://github.com/cuiweiman/wang-wen-jun#com.wang.think.initmethod}
+	 * <p>
+	 * 两种自定义初始化 bean 的方法：
+	 * 1. 实现InitializingBean接口的afterPropertiesSet方法；
+	 * 2. xml配置文件中的 init-method 属性。
+	 * <p>
 	 * Give a bean a chance to react now all its properties are set,
 	 * and a chance to know about its owning bean factory (this object).
 	 * This means checking whether the bean implements InitializingBean or defines
@@ -2008,6 +2030,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	protected void invokeInitMethods(String beanName, Object bean, @Nullable RootBeanDefinition mbd)
 			throws Throwable {
 
+		// 首先检查是否是 InitializingBean ，如果是的话，调用 afterPropertiesSet 方法。
 		boolean isInitializingBean = (bean instanceof InitializingBean);
 		if (isInitializingBean && (mbd == null || !mbd.isExternallyManagedInitMethod("afterPropertiesSet"))) {
 			if (logger.isTraceEnabled()) {
@@ -2023,6 +2046,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					throw pae.getException();
 				}
 			} else {
+				// 属性初始化后的处理
 				((InitializingBean) bean).afterPropertiesSet();
 			}
 		}
@@ -2032,6 +2056,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			if (StringUtils.hasLength(initMethodName) &&
 					!(isInitializingBean && "afterPropertiesSet".equals(initMethodName)) &&
 					!mbd.isExternallyManagedInitMethod(initMethodName)) {
+				// 调用 用户自定义的 初始化方法 init-method
 				invokeCustomInitMethod(beanName, bean, mbd);
 			}
 		}
