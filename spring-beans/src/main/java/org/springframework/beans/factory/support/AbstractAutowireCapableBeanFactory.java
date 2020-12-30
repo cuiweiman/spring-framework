@@ -569,7 +569,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * 2.3如果既不存在工厂方法，也不存在带有参数的构造函数，则使用默认的构造函数进行 bean 实例化；
 	 * 3. {@link #applyMergedBeanDefinitionPostProcessors} 方法：bean 合并后的处理，Autowired 注解就是通过此方法实现注入类型的预解析
 	 * 4. 依赖处理。在Spring中有依赖循环的情况，如A中有B的属性，B中含有A的属性，此时假设A和B都是单例的。那么Spring中创建A时，提前将
-	 * ObjectFactory 放入缓存中；此时创建B，当涉及到创建A的步骤，通过缓存中的 ObjectFactory 来创建实例，从而解决了循环依赖的问题。
+	 * ObjectFactory 放入缓存中；此时创建B，当涉及到创建 属性A 的步骤时，通过缓存中的 ObjectFactory 来创建实例 A，从而解决了循环依赖的问题。
 	 * 5. 属性填充。将所有的属性填充至 Bean 实例中。
 	 * 6. 循环依赖检查。Spring的循环依赖只对单例有效，对于 prototype 的 bean 没有好的解决方法，只能检测出来，然后抛出异常。
 	 * 7. 注册 DisposableBean：如果配置了 destroy-method 方法，那么需要注册该方法从而在销毁时调用。
@@ -626,6 +626,15 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// even when triggered by lifecycle interfaces like BeanFactoryAware.
 		/*
 		是否提前曝光 的条件：单例 & 允许循环依赖 & 当前 bean 正在创建中，检测循环依赖。
+		1. earlySingletonExposure:提早曝光的单例；
+		2. mbd.isSingleton(): 此 RootBeanDefinition 是否是单例的
+		3. this.allowCircularReferences：是否允许循环依赖。AbstractRefreshableApplicationContext 中有设置方式，可以通过硬编码的方式进行设置
+		或者通过自定义命名空间进行配置，其中硬编码的方式如下：
+			ClassPathXmlApplicationContext bf = new ClassPathXmlApplicationContext("aspectTest.xml");
+        	bf.setAllowBeanDefinitionOverriding(false);
+        4. isSingletonCurrentlyInCreation(beanName):该 bean 是否在创建中。DefaultSingletonBeanRegistry#singletonsCurrentlyInCreation记录了
+        bean 的加载状态，在 bean 开始创建前会将 beanName 记录在属性中，创建结束后从属性中移除。singleton 记录属性的函数在 DefaultSingletonBeanRegistry#getSingleton
+        中的 beforeSingletonCreation 和 afterSingletonCreation中，this.singletonsCurrentlyInCreation.add()和remove 分别是记录和移除。
 		 */
 		boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
 				isSingletonCurrentlyInCreation(beanName));
@@ -634,7 +643,28 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.trace("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
-			// 为避免后期循环依赖，可以在 bean 初始化完成前 将创建的实例放入到缓存池中
+
+			/*
+			为避免后期循环依赖，可以在 bean 初始化完成前 将创建的实例放入到缓存池中。
+			以AB循环为例，A中有属性类B，B中有属性类A，那么初始化 beanA的过程如下：
+创建 beanA——>开始创建bean，记录beanNameA为创建中——>addSingletonFactory——>populateBean（属性填充）——>结束创建 beanA，移除 beanNameA 创建中的状态。
+																		↓
+																	  开始创建 beanB（记录状态创建中）—>addSingletonFactory—>populateBean（属性填充）—>结束创建 beanB，移除 beanNameB 创建中的状态。
+																	  														↓
+																	  														getBean(A)
+			在getBean(A)方法中，不会直接去实例化 beanA，而是先检测缓存中是否有创建好的 beanA，或者创建好的 ObjectFactory，对于A的ObjectFactory是创建好的，会直接调用ObjectFactory去创建A。
+			而最关键的是 ObjectFactory 的实现，即如下 源代码。
+
+			getEarlyBeanReference：除了 后处理器的调用外，没有做其他逻辑。
+			 */
+			/*addSingletonFactory(beanName, new ObjectFactory() {
+				// 对 bean 再一次依赖引用，主要应用于 SmartInstantiationAware BeanPost Processor，其中我们熟知的AOP 就是在这里将 advice 动态织入 bean 中，
+				// 若没有 配置 AOP，则直接返回 bean ，不做任何处理。
+				@Override
+				public Object getObject() throws BeansException {
+					return getEarlyBeanReference(beanName, mbd, bean);
+				}
+			});*/
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 
@@ -1004,6 +1034,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * 应用 后置处理器
 	 * Obtain a reference for early access to the specified bean,
 	 * typically for the purpose of resolving a circular reference.
 	 *
