@@ -2318,7 +2318,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
-	 * 注册需要销毁的bean
+	 * 注册 用户自定义的 销毁 bean 的方法
 	 * Add the given bean to the list of disposable beans in this factory,
 	 * registering its DisposableBean interface and/or the given destroy method
 	 * to be called on factory shutdown (if applicable). Only applies to singletons.
@@ -2338,9 +2338,14 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// Register a DisposableBean implementation that performs all destruction
 				// work for the given bean: DestructionAwareBeanPostProcessors,
 				// DisposableBean interface, custom destroy method.
+				/*
+				单例模式下注册需要销毁的bean，此方法中处理 实现了 DisposableBean 接口的 bean，并且对所有的 bean 使用
+				DestructionAwareBeanPostProcessor 处理 DisposableBean DestructionAwareBeanPostProcessor？？？
+				 */
 				registerDisposableBean(beanName,
 						new DisposableBeanAdapter(bean, beanName, mbd, getBeanPostProcessors(), acc));
 			} else {
+				// 自定义 scope 的处理
 				// A bean with a custom scope...
 				Scope scope = this.scopes.get(mbd.getScope());
 				if (scope == null) {

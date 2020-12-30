@@ -1934,11 +1934,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * Spring中程序已经执行过 Bean 的实例化，并且完成了属性填充，这时会调用 用户设定 的初始化方法。
 	 * <p>
 	 * 1. 激活Aware。Aware的使用案例 {@see https://github.com/cuiweiman/wang-wen-jun#com.wang.think.aware}
-	 * 2. 处理器的应用。BeanPostProcessor 给与用户权限去扩展或者更改Spring，在调用客户 自定义初始化方法前 以及 调用自定义初始化方法后 会
+	 * 2. 后处理器 方法 的应用。BeanPostProcessor 给与用户权限去扩展或者更改Spring，在调用客户 自定义初始化方法前 以及 调用自定义初始化方法后 会
 	 * 分别调用 {@link BeanPostProcessor#postProcessBeforeInitialization(Object, String)} 和  {@link BeanPostProcessor#postProcessAfterInitialization(Object, String)},
 	 * 方便用户根据业务需求进行相应处理。
 	 * 3. 激活用户自定义的 init 初始化方法 {@link #invokeInitMethods(String, Object, RootBeanDefinition)}。初始化方法的使用案例：
 	 * {@see https://github.com/cuiweiman/wang-wen-jun#com.wang.think.initmethod}
+	 * 补充：当 Bean 通过实现 DisposableBean 接口来自定义 destroy 方法时，会被 {@link AbstractBeanFactory#registerDisposableBeanIfNecessary} 处理
 	 * <p>
 	 * Initialize the given bean instance, applying factory callbacks
 	 * as well as init methods and bean post processors.
