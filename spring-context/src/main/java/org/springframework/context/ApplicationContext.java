@@ -20,6 +20,7 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.HierarchicalBeanFactory;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.core.env.EnvironmentCapable;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.lang.Nullable;
@@ -28,6 +29,9 @@ import org.springframework.lang.Nullable;
  * 扩展了 {@link BeanFactory} 的所有功能，是它的超集。
  * ApplicationContext 和 BeanFactory 都是用于加载 bean 的，但是 ApplicationContext 提供了更多扩展功能，建议优先使用。
  * 除非在一些限制场合：字节长度对内存有很大的影响时（Applet）。绝大多数通常都是用 ApplicationContext。
+ * 解读的切入点是：
+ * 解析给定的路径数组：{@link ClassPathXmlApplicationContext#setConfigLocations}；
+ * 解析 和 加载 配置文件的配置信息，并扩展 BeanFactory 容器的功能： {@link ClassPathXmlApplicationContext#refresh()}。
  * <p>
  * Central interface to provide configuration for an application.
  * This is read-only while the application is running, but may be
