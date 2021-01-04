@@ -605,11 +605,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				postProcessBeanFactory(beanFactory);
 
 				// Invoke factory processors registered as beans in the context.
-				// 激活 各种 BeanFactory 的处理器
+				/*
+				激活 注册的 各种 BeanFactoryPostProcessor 处理器。可以配置多个 BeanFactoryPostProcessor，还可以通过设置 Order 属性来控制
+				BeanFactoryPostProcessor 的执行顺序。
+				 */
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
-				// 注册 拦截 Bean 创建的 Bean 处理器，这里只是注册，真正的调用是在 getBean() 的时候。
+				// 注册 拦截 Bean 创建的 Bean 处理器（BeanPostProcessors），这里只是注册，真正的调用是在 getBean() 即 bean 实例化阶段 的时候。
 				registerBeanPostProcessors(beanFactory);
 
 				// Initialize message source for this context.
@@ -750,13 +753,18 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Tell the internal bean factory to use the context's class loader etc.
 		// 设置 beanFactory 的 ClassLoader 为 当前 Context 的 ClassLoader。
 		beanFactory.setBeanClassLoader(getClassLoader());
-		// 设置 beanFactory 的表达式语言处理器，Spring3新增了表达式语言的支持，默认可以使用 #{bean.xxx} 的形式来调用相关属性值。
+		// 设置 beanFactory 的表达式语言处理器(SpEL：Spring Expression Language)，Spring3新增了表达式语言的支持，默认可以使用 #{bean.xxx} 的形式来调用相关属性值。
 		beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
-		// 为 beanFactory 增加一个默认的 PropertyEditor，是 管理 bean 的属性等设置 的工具
+
+		/*
+		为 beanFactory 增加一个默认的 PropertyEditor，是 管理 bean 的属性等设置 的工具。
+		使用场景：Spring 依赖注入时，Date 类型的属性无法被识别，因为类中定义的是 Date 类型，而 XML 中配置的是 String 类型，所以会出现异常。
+		此时就需要使用自定义属性编辑器，将 XML 中配置的 String 类型的 时间转换为 Date 类型的时间。
+		 */
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		/*
-		添加 BeanPostProcessor
+		添加 BeanPostProcessor： ApplicationContextAwareProcessor 处理器。
 		 */
 		// Configure the bean factory with context callbacks.
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
