@@ -619,7 +619,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// 为上下文初始化 Message 源，即不同语言的消息体，国际化处理。
 				initMessageSource();
 
-				// 初始化引用消息广播器，并放入 “applicationEventMulticaster” bean 中
+				// 初始化 应用事件传播器 ，并放入 “applicationEventMulticaster” bean 中
 				// Initialize event multicaster for this context.
 				initApplicationEventMulticaster();
 
@@ -628,7 +628,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				onRefresh();
 
 				// Check for listener beans and register them.
-				// 在所有注册的 bean 中查找 Listener bean，注册到消息广播器中。
+				// 注册监听器：在所有注册的 bean 中查找 Listener bean，注册到消息广播器中。
 				registerListeners();
 
 				// 初始化 剩下的 单实例（非惰性）
@@ -846,12 +846,17 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 初始化消息资源：Spring国际化
+	 * <p>
+	 * 通过读取并将自定义资源文件配置记录在容器中，那么就可以在获取资源文件的时候直接使用了。
+	 * <p>
 	 * Initialize the MessageSource.
 	 * Use parent's if none defined in this context.
 	 */
 	protected void initMessageSource() {
 		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
 		if (beanFactory.containsLocalBean(MESSAGE_SOURCE_BEAN_NAME)) {
+			// 如果 配置中 配置了 messageSource，那么将 messageSource 提取并记录在 this.messageSource 中。
 			this.messageSource = beanFactory.getBean(MESSAGE_SOURCE_BEAN_NAME, MessageSource.class);
 			// Make MessageSource aware of parent MessageSource.
 			if (this.parent != null && this.messageSource instanceof HierarchicalMessageSource) {
@@ -867,6 +872,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			}
 		} else {
 			// Use empty MessageSource to be able to accept getMessage calls.
+			// 如果用户并没有定义配置文件，那么使用临时的 DelegatingMessageSource 以便于作为调用 getMessage 方法的返回
 			DelegatingMessageSource dms = new DelegatingMessageSource();
 			dms.setParentMessageSource(getInternalParentMessageSource());
 			this.messageSource = dms;
@@ -878,6 +884,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 初始化 应用事件传播器 （ApplicationEventMulticaster）
+	 * 应用事件传播器 使用案例：{@link https://github.com/cuiweiman/wang-wen-jun#com.wang.think.applicationeventmulticaster}
+	 * <p>
+	 * 如果用户自定义了 事件广播器，那么使用 用户自定义的 事件广播器。
+	 * 如果用户没有自定义事件广播器，那么使用默认的 ApplicationEventMulticaster。
+	 * <p>
 	 * Initialize the ApplicationEventMulticaster.
 	 * Uses SimpleApplicationEventMulticaster if none defined in the context.
 	 *
@@ -892,6 +904,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				logger.trace("Using ApplicationEventMulticaster [" + this.applicationEventMulticaster + "]");
 			}
 		} else {
+			/*
+			当产生 Spring 事件的时候，默认使用 SimpleApplicationEventMulticaster 的 multicastEvent 来广播事件，遍历所有监听器，
+			并使用监听器中的 onApplicationEvent 方法来进行监听器的处理。而对于每个监听器来说，其实都可以获取到产生的事件，但是是否
+			进行处理则由事件监听器来决定。
+			 */
 			this.applicationEventMulticaster = new SimpleApplicationEventMulticaster(beanFactory);
 			beanFactory.registerSingleton(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, this.applicationEventMulticaster);
 			if (logger.isTraceEnabled()) {
@@ -940,17 +957,21 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 注册 事件监听器
+	 * <p>
 	 * Add beans that implement ApplicationListener as listeners.
 	 * Doesn't affect other listeners, which can be added without being beans.
 	 */
 	protected void registerListeners() {
 		// Register statically specified listeners first.
+		// 硬编码方式 注册的 监听器 的处理
 		for (ApplicationListener<?> listener : getApplicationListeners()) {
 			getApplicationEventMulticaster().addApplicationListener(listener);
 		}
 
 		// Do not initialize FactoryBeans here: We need to leave all regular beans
 		// uninitialized to let post-processors apply to them!
+		// 配置文件 注册的 监听器 的处理
 		String[] listenerBeanNames = getBeanNamesForType(ApplicationListener.class, true, false);
 		for (String listenerBeanName : listenerBeanNames) {
 			getApplicationEventMulticaster().addApplicationListenerBean(listenerBeanName);
@@ -1432,6 +1453,19 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	// Implementation of MessageSource interface
 	//---------------------------------------------------------------------
 
+	/**
+	 * {@link #getMessageSource()} 获取自定义资源配置
+	 *
+	 * @param code           the message code to look up, e.g. 'calculator.noRateSet'.
+	 *                       MessageSource users are encouraged to base message names on qualified class
+	 *                       or package names, avoiding potential conflicts and ensuring maximum clarity.
+	 * @param args           an array of arguments that will be filled in for params within
+	 *                       the message (params look like "{0}", "{1,date}", "{2,time}" within a message),
+	 *                       or {@code null} if none
+	 * @param defaultMessage a default message to return if the lookup fails
+	 * @param locale         the locale in which to do the lookup
+	 * @return 结果
+	 */
 	@Override
 	public String getMessage(String code, @Nullable Object[] args, @Nullable String defaultMessage, Locale locale) {
 		return getMessageSource().getMessage(code, args, defaultMessage, locale);
