@@ -393,6 +393,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 当完成 ApplicationContext 初始化后，要通过 Spring 中的事件发布机制
+	 * 来发出 ContextRefreshedEvent 事件，以保证对应的监听器可以做进一步的逻辑处理。
+	 * <p>
 	 * Publish the given event to all listeners.
 	 * <p>Note: Listeners get initialized after the MessageSource, to be able
 	 * to access it within listener implementations. Thus, MessageSource
@@ -421,6 +424,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 当完成 ApplicationContext 初始化后，要通过 Spring 中的事件发布机制
+	 * 来发出 ContextRefreshedEvent 事件，以保证对应的监听器可以做进一步的逻辑处理。
+	 * <p>
 	 * Publish the given event to all listeners.
 	 *
 	 * @param event     the event to publish (may be an {@link ApplicationEvent}
@@ -631,7 +637,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// 注册监听器：在所有注册的 bean 中查找 Listener bean，注册到消息广播器中。
 				registerListeners();
 
-				// 初始化 剩下的 单实例（非惰性）
+				// 初始化非延迟加载单例：初始化 剩下的 单实例（非惰性）
 				// Instantiate all remaining (non-lazy-init) singletons.
 				finishBeanFactoryInitialization(beanFactory);
 
@@ -919,6 +925,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 初始化 上下文的 生命周期 处理器。ApplicationContext 启动或停止时，会通过 LifeCycleProcessor
+	 * 与所有声明的 bean 的周期进行状态更新，而在 LifeCycleProcessor 的使用前，首先需要初始化。
+	 * <p>
 	 * Initialize the LifecycleProcessor.
 	 * Uses DefaultLifecycleProcessor if none defined in the context.
 	 *
@@ -988,6 +997,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 初始化非延迟加载单例
+	 * <p>
+	 * ApplicationContext 实现的默认行为就是在启动时将所有单例 bean 提起进行实例化。即
+	 * 在 提前 实例化过程中，ApplicationContext 会创建并配置 所有的 单例 bean。如此，配置中如果有
+	 * 错误将会被立刻发现。而提前实例化的过程 就在本方法中。
+	 * <p>
 	 * Finish the initialization of this context's bean factory,
 	 * initializing all remaining singleton beans.
 	 */
@@ -1016,28 +1031,46 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.setTempClassLoader(null);
 
 		// Allow for caching all bean definition metadata, not expecting further changes.
+		// 冻结所有的 bean 定义，说明注册的 bean 定义将 不被修改或做任何进一步的处理
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
+		// 初始化 剩下的 单例（非懒加载）
 		beanFactory.preInstantiateSingletons();
 	}
 
 	/**
+	 * 完成刷新过程，通知生命周期处理器 lifeCycleProcessor 刷新过程，同时发出 ContextRefreshEvent 通知别人。
+	 * <p>
+	 * Spring 中提供了 Lifecycle 接口，Lifecycle 中包含 start/stop方法，实现此接口后，Spring 会保证在启动的时候调用其 start
+	 * 方法开始生命周期，并在 Spring 关闭时 调用 stop 方法来结束生命周期，通常用来配置后台程序。在启动后一直运行（如对MQ进行轮询等）。
+	 * 而 ApplicationContext 初始化 的最后一步，就是为了保证这一功能的实现。
+	 * <p>
 	 * Finish the refresh of this context, invoking the LifecycleProcessor's
 	 * onRefresh() method and publishing the
 	 * {@link org.springframework.context.event.ContextRefreshedEvent}.
 	 */
 	protected void finishRefresh() {
 		// Clear context-level resource caches (such as ASM metadata from scanning).
+		// 清空 资源 加载器 中的 所有缓存
 		clearResourceCaches();
 
 		// Initialize lifecycle processor for this context.
+		/*
+		初始化 上下文的 生命周期 处理器。ApplicationContext 启动或停止时，会通过 LifeCycleProcessor
+		与所有声明的 bean 的周期进行状态更新，而在 LifeCycleProcessor 的使用前，首先需要初始化。
+		 */
 		initLifecycleProcessor();
 
 		// Propagate refresh to lifecycle processor first.
+		// 启动 所有 实现了 Lifecycle 接口的 bean。
 		getLifecycleProcessor().onRefresh();
 
 		// Publish the final event.
+		/*
+		当完成 ApplicationContext 初始化后，要通过 Spring 中的事件发布机制
+		来发出 ContextRefreshedEvent 事件，以保证对应的监听器可以做进一步的逻辑处理。
+		 */
 		publishEvent(new ContextRefreshedEvent(this));
 
 		// Participate in LiveBeansView MBean, if active.

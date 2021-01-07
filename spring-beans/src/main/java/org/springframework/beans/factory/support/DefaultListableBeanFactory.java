@@ -867,6 +867,15 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return (this.configurationFrozen || super.isBeanEligibleForMetadataCaching(beanName));
 	}
 
+	/**
+	 * 初始化非延迟加载单例
+	 * <p>
+	 * ApplicationContext 实现的默认行为就是在启动时将所有单例 bean 提起进行实例化。即
+	 * 在 提前 实例化过程中，ApplicationContext 会创建并配置 所有的 单例 bean。如此，配置中如果有
+	 * 错误将会被立刻发现。
+	 *
+	 * @throws BeansException 异常
+	 */
 	@Override
 	public void preInstantiateSingletons() throws BeansException {
 		if (logger.isTraceEnabled()) {
