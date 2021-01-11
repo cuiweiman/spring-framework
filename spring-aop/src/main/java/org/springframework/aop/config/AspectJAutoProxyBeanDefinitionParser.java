@@ -28,6 +28,8 @@ import org.springframework.beans.factory.xml.ParserContext;
 import org.springframework.lang.Nullable;
 
 /**
+ * bean definition 的解析器，专门用于 解析 {@code aspectj-autoproxy} 标签（<aop:aspectj-autoproxy/>）。
+ * <p>
  * {@link BeanDefinitionParser} for the {@code aspectj-autoproxy} tag,
  * enabling the automatic application of @AspectJ-style aspects found in
  * the {@link org.springframework.beans.factory.BeanFactory}.
@@ -38,10 +40,20 @@ import org.springframework.lang.Nullable;
  */
 class AspectJAutoProxyBeanDefinitionParser implements BeanDefinitionParser {
 
+	/**
+	 * 解析功能入口
+	 *
+	 * @param element       the element that is to be parsed into one or more {@link BeanDefinition BeanDefinitions}
+	 * @param parserContext the object encapsulating the current state of the parsing process;
+	 *                      provides access to a {@link org.springframework.beans.factory.support.BeanDefinitionRegistry}
+	 * @return 解析结果
+	 */
 	@Override
 	@Nullable
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
+		// 注册 AnnotationAwareAspectJAutoProxyCreator
 		AopNamespaceUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(parserContext, element);
+		// 对于注解中 子类的处理
 		extendBeanDefinition(element, parserContext);
 		return null;
 	}

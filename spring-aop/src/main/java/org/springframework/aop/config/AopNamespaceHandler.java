@@ -21,6 +21,13 @@ import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
 
 /**
+ * NameSpace 处理器。
+ * 为标签 {@code <aop:config>} 提供 bean definition 解析器，一个标签可以嵌套 {@code pointcut},
+ * {@code advisor} 和 {@code aspect} 标签。
+ * <p>
+ * 在 xml 配置中，若遇到 <aop:aspectj-autoproxy/> 注解，就会使用解析器
+ * {@link AspectJAutoProxyBeanDefinitionParser}进行解析。
+ * <p>
  * {@code NamespaceHandler} for the {@code aop} namespace.
  *
  * <p>Provides a {@link org.springframework.beans.factory.xml.BeanDefinitionParser} for the
@@ -55,6 +62,8 @@ import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
 public class AopNamespaceHandler extends NamespaceHandlerSupport {
 
 	/**
+	 * 注册解析器，用于解析 aop 的配置标签。
+	 * <p>
 	 * Register the {@link BeanDefinitionParser BeanDefinitionParsers} for the
 	 * '{@code config}', '{@code spring-configured}', '{@code aspectj-autoproxy}'
 	 * and '{@code scoped-proxy}' tags.
