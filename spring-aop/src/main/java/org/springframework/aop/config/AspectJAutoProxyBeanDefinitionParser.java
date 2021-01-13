@@ -42,6 +42,9 @@ class AspectJAutoProxyBeanDefinitionParser implements BeanDefinitionParser {
 
 	/**
 	 * 解析功能入口
+	 * <p>
+	 * 1. 通过自定义配置，注册 {@link org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator}
+	 * 2. 对于注解中 子类的处理
 	 *
 	 * @param element       the element that is to be parsed into one or more {@link BeanDefinition BeanDefinitions}
 	 * @param parserContext the object encapsulating the current state of the parsing process;
