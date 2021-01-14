@@ -16,15 +16,16 @@
 
 package org.springframework.aop.aspectj;
 
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.AfterAdvice;
+
 import java.io.Serializable;
 import java.lang.reflect.Method;
 
-import org.aopalliance.intercept.MethodInterceptor;
-import org.aopalliance.intercept.MethodInvocation;
-
-import org.springframework.aop.AfterAdvice;
-
 /**
+ * 与 前置增强器 不同，没有提供中间的类，而是直接在 拦截器链 中使用了中间的 {@link AspectJAfterAdvice}。
+ * <p>
  * Spring AOP advice wrapping an AspectJ after advice method.
  *
  * @author Rod Johnson
@@ -45,8 +46,8 @@ public class AspectJAfterAdvice extends AbstractAspectJAdvice
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		try {
 			return mi.proceed();
-		}
-		finally {
+		} finally {
+			// 激活 增强方法
 			invokeAdviceMethod(getJoinPointMatch(), null, null);
 		}
 	}

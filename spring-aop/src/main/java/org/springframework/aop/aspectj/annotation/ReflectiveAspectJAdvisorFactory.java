@@ -151,13 +151,14 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 
 		// If it's a per target aspect, emit the dummy instantiating aspect.
 		if (!advisors.isEmpty() && lazySingletonAspectInstanceFactory.getAspectMetadata().isLazilyInstantiated()) {
-			// 如果寻找的 增强器不为空，而且又配置了 增强延迟初始化，那么需要在首位 加入 同步实例化 增强器。
+			// 如果 寻找的增强器 不为空，而且又配置了 增强延迟初始化，那么需要在首位 加入 同步实例化 增强器。
 			Advisor instantiationAdvisor = new SyntheticInstantiationAdvisor(lazySingletonAspectInstanceFactory);
 			advisors.add(0, instantiationAdvisor);
 		}
 
 		// Find introduction fields.
-		// 获取 DeclareParents 注解
+		// 获取 DeclareParents 注解。@DeclareParents 主要用于 引介增强 的 注解形式 的实现，而其 实现方式 与 普通增强 方式 很类似。
+		// 只不过是用 DeclareParentsAdvisor 对功能进行了封装。
 		for (Field field : aspectClass.getDeclaredFields()) {
 			Advisor advisor = getDeclareParentsAdvisor(field);
 			if (advisor != null) {
@@ -183,6 +184,9 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	}
 
 	/**
+	 * 获取 DeclareParents 注解。@DeclareParents 主要用于 引介增强 的 注解形式 的实现，而其 实现方式 与 普通增强 方式 很类似。
+	 * 只不过是用 DeclareParentsAdvisor 对功能进行了封装。
+	 * <p>
 	 * Build a {@link org.springframework.aop.aspectj.DeclareParentsAdvisor}
 	 * for the given introduction field.
 	 * <p>Resulting Advisors will need to be evaluated for targets.
@@ -261,6 +265,16 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	}
 
 
+	/**
+	 * 根据注解中的信息 初始化对应的 增强器
+	 *
+	 * @param candidateAdviceMethod the candidate advice method
+	 * @param expressionPointcut    the AspectJ expression pointcut
+	 * @param aspectInstanceFactory the aspect instance factory
+	 * @param declarationOrder      the declaration order within the aspect
+	 * @param aspectName            the name of the aspect
+	 * @return 增强器
+	 */
 	@Override
 	@Nullable
 	public Advice getAdvice(Method candidateAdviceMethod, AspectJExpressionPointcut expressionPointcut,
@@ -289,6 +303,7 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 
 		AbstractAspectJAdvice springAdvice;
 
+		// 根据 不同的注解类型，封装 与注解对应的增强器。
 		switch (aspectJAnnotation.getAnnotationType()) {
 			case AtPointcut:
 				if (logger.isDebugEnabled()) {
@@ -296,14 +311,17 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 				}
 				return null;
 			case AtAround:
+				// AtAround 生成 对应的  AspectJAroundAdvice 增强器
 				springAdvice = new AspectJAroundAdvice(
 						candidateAdviceMethod, expressionPointcut, aspectInstanceFactory);
 				break;
 			case AtBefore:
+				// AtBefore 生成 对应的  AspectJMethodBeforeAdvice 增强器。
 				springAdvice = new AspectJMethodBeforeAdvice(
 						candidateAdviceMethod, expressionPointcut, aspectInstanceFactory);
 				break;
 			case AtAfter:
+				// AtAfter 生成 对应的  AspectJAfterAdvice 增强器。{@see }
 				springAdvice = new AspectJAfterAdvice(
 						candidateAdviceMethod, expressionPointcut, aspectInstanceFactory);
 				break;
@@ -350,6 +368,16 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	protected static class SyntheticInstantiationAdvisor extends DefaultPointcutAdvisor {
 
 		public SyntheticInstantiationAdvisor(final MetadataAwareAspectInstanceFactory aif) {
+			/*
+			super(aif.getAspectMetadata().getPerClausePointcut(), new MethodBeforeAdvice() {
+				// 目标方法调用，类似 @Before
+				@Override
+				public void before(Method method, Object[] args, Object target) throws Throwable {
+					// 简单初始化 aspect
+					aif.getAspectInstance();
+				}
+			});
+			*/
 			super(aif.getAspectMetadata().getPerClausePointcut(), (MethodBeforeAdvice)
 					(method, args, target) -> aif.getAspectInstance());
 		}

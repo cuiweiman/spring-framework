@@ -23,10 +23,14 @@ import org.springframework.aop.MethodBeforeAdvice;
 import org.springframework.lang.Nullable;
 
 /**
+ * 与后置 增强器不同，在拦截器链中放置了 {@link org.springframework.aop.framework.adapter.MethodBeforeAdviceInterceptor}，
+ * 并在其中又放置了 {@link AspectJMethodBeforeAdvice}，在调用 invoke 时首先串联调用。
+ * <p>
  * Spring AOP advice that wraps an AspectJ before method.
  *
  * @author Rod Johnson
  * @author Adrian Colyer
+ * @see org.springframework.aop.framework.adapter.MethodBeforeAdviceInterceptor
  * @since 2.0
  */
 @SuppressWarnings("serial")
@@ -39,6 +43,14 @@ public class AspectJMethodBeforeAdvice extends AbstractAspectJAdvice implements 
 	}
 
 
+	/**
+	 * before 方法
+	 *
+	 * @param method the method being invoked
+	 * @param args   the arguments to the method
+	 * @param target the target of the method invocation. May be {@code null}.
+	 * @throws Throwable 异常
+	 */
 	@Override
 	public void before(Method method, Object[] args, @Nullable Object target) throws Throwable {
 		invokeAdviceMethod(getJoinPointMatch(), null, null);

@@ -37,11 +37,15 @@ import org.springframework.util.Assert;
 @SuppressWarnings("serial")
 public class MethodBeforeAdviceInterceptor implements MethodInterceptor, BeforeAdvice, Serializable {
 
+	/**
+	 * 前置增强的 AspectJMethodBeforeAdvice
+	 */
 	private final MethodBeforeAdvice advice;
 
 
 	/**
 	 * Create a new MethodBeforeAdviceInterceptor for the given advice.
+	 *
 	 * @param advice the MethodBeforeAdvice to wrap
 	 */
 	public MethodBeforeAdviceInterceptor(MethodBeforeAdvice advice) {
@@ -50,6 +54,13 @@ public class MethodBeforeAdviceInterceptor implements MethodInterceptor, BeforeA
 	}
 
 
+	/**
+	 * 执行 before 方法
+	 *
+	 * @param mi mi
+	 * @return 结果
+	 * @throws Throwable 异常
+	 */
 	@Override
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		this.advice.before(mi.getMethod(), mi.getArguments(), mi.getThis());

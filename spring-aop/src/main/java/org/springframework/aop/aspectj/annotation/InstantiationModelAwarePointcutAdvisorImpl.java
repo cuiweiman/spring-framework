@@ -88,8 +88,8 @@ final class InstantiationModelAwarePointcutAdvisorImpl
 	 * 将 切点信息 封装入本实例。
 	 * <p>
 	 * 在实例初始化过程中，还完成了对于增强器的初始化。因为不同的增强所体现的逻辑是不同的，比如 @Before("test()") 与 @After("test()")标签
-	 * 的不同，就是增强器 增强的位置 不同，所以就需要 不同的增强器 来完成不同的逻辑。而根据注解中的 信息初始化 对应的 增强器，就是在
-	 * instantiateAdvice 函数中实现的。
+	 * 的不同，就是增强器 增强的位置 不同，所以就需要 不同的增强器 来完成不同的逻辑。而根据注解中的信息 初始化对应的 增强器，就是在
+	 * {@link InstantiationModelAwarePointcutAdvisorImpl#instantiateAdvice(org.springframework.aop.aspectj.AspectJExpressionPointcut)} 函数中实现的。
 	 *
 	 * @param declaredPointcut      declaredPointcut
 	 * @param aspectJAdviceMethod   aspectJAdviceMethod
@@ -165,6 +165,12 @@ final class InstantiationModelAwarePointcutAdvisorImpl
 		return this.instantiatedAdvice;
 	}
 
+	/**
+	 * 根据注解中的信息 初始化对应的 增强器
+	 *
+	 * @param pointcut 切点信息
+	 * @return 增强器
+	 */
 	private Advice instantiateAdvice(AspectJExpressionPointcut pointcut) {
 		Advice advice = this.aspectJAdvisorFactory.getAdvice(this.aspectJAdviceMethod, pointcut,
 				this.aspectInstanceFactory, this.declarationOrder, this.aspectName);
