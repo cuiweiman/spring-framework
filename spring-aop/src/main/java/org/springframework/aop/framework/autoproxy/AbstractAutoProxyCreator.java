@@ -16,19 +16,9 @@
 
 package org.springframework.aop.framework.autoproxy;
 
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.aopalliance.aop.Advice;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.TargetSource;
@@ -49,6 +39,10 @@ import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostP
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import java.lang.reflect.Constructor;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link org.springframework.beans.factory.config.BeanPostProcessor} implementation
@@ -376,7 +370,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		// 如果获取到了 增强，则需要针对增强创建 代理
 		if (specificInterceptors != DO_NOT_PROXY) {
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);
-			// 创建代理
+			// 获取到 所有 与目标 bean 匹配的 增强器以后， 在这里开始 创建代理
 			Object proxy = createProxy(
 					bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
 			this.proxyTypes.put(cacheKey, proxy.getClass());
@@ -462,6 +456,9 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
+	 * 获取到 所有 与目标 bean 匹配的 增强器以后， 在这里开始 为指定的 bean 创建 AOP 代理。
+	 * 对于代理类的创建，Spring 委托给了 ProxyFactory 处理。在本方法中，主要是对 ProxyFactory 的初始化操作
+	 * <p>
 	 * Create an AOP proxy for the given bean.
 	 *
 	 * @param beanClass            the class of the bean
@@ -481,8 +478,10 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		}
 
 		ProxyFactory proxyFactory = new ProxyFactory();
+		// 获取当前类 中的 相关属性
 		proxyFactory.copyFrom(this);
 
+		// 决定 对于指定的 bean 是否应该使用 targetClass，而不是它的接口代理，检查 proxyTargetClass 设置以及 preserveTargetClass 属性。
 		if (!proxyFactory.isProxyTargetClass()) {
 			if (shouldProxyTargetClass(beanClass, beanName)) {
 				proxyFactory.setProxyTargetClass(true);
@@ -492,15 +491,19 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		}
 
 		Advisor[] advisors = buildAdvisors(beanName, specificInterceptors);
+		// 代理中 加入 适配的 增强器
 		proxyFactory.addAdvisors(advisors);
+		// 设置 要代理的 类
 		proxyFactory.setTargetSource(targetSource);
+		// 定制 代理
 		customizeProxyFactory(proxyFactory);
-
+		// 设置 代理工厂被配置之后，是否还允许修改通知。
+		// 缺省值为 false（即在代理被配置之后，不允许修改 代理的配置）
 		proxyFactory.setFrozen(this.freezeProxy);
 		if (advisorsPreFiltered()) {
 			proxyFactory.setPreFiltered(true);
 		}
-
+		// 对于代理类的创建，Spring 委托给了 ProxyFactory 处理。而在本函数中，主要是对 ProxyFactory 的初始化操作
 		return proxyFactory.getProxy(getProxyClassLoader());
 	}
 
