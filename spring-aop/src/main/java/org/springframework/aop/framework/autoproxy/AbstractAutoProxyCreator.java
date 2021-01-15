@@ -515,7 +515,8 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		if (advisorsPreFiltered()) {
 			proxyFactory.setPreFiltered(true);
 		}
-		// 代理类的创建与获取，Spring 委托给了 ProxyFactory 处理。而在本函数中，主要是对 ProxyFactory 的初始化操作
+		// 代理类的创建与获取，Spring 委托给了 ProxyFactory 处理。而在本函数中，主要是对 ProxyFactory 的初始化操作。
+		// 获取到的 具体是 JDK动态代理还是CGLIB 动态代理，要看配置以及实现
 		return proxyFactory.getProxy(getProxyClassLoader());
 	}
 
