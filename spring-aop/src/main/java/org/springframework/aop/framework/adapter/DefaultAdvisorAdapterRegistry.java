@@ -53,19 +53,33 @@ public class DefaultAdvisorAdapterRegistry implements AdvisorAdapterRegistry, Se
 	}
 
 
+	/**
+	 * 将 拦截器 转化封装为 Advisor 增强器
+	 * <p>
+	 * 由于 Spring 中设计过多的 拦截器、增强器、增强方法 等方式来对逻辑进行增强，因此有必要统一
+	 * 封装成 Advisor 来进行代理的创建，完成了增强的封装过程，那么解析最重要的一步就只剩下代理的创建与获取了。
+	 *
+	 * @param adviceObject 拦截器
+	 * @return Advisor 增强器
+	 * @throws UnknownAdviceTypeException 异常
+	 */
 	@Override
 	public Advisor wrap(Object adviceObject) throws UnknownAdviceTypeException {
+		// 封装 Advisor 类型。如果要封装的 对象本身 就是 Advisor 类型，那么无须在做过多处理。
 		if (adviceObject instanceof Advisor) {
 			return (Advisor) adviceObject;
 		}
+		// 只对 Advisor 类型 和 Advice 类型 进行封装，若不属于这两种类型，那么就不能封装。
 		if (!(adviceObject instanceof Advice)) {
 			throw new UnknownAdviceTypeException(adviceObject);
 		}
 		Advice advice = (Advice) adviceObject;
 		if (advice instanceof MethodInterceptor) {
+			// 如果是 MethodInterceptor 类型，则使用 DefaultPointcutAdvisor 进行封装
 			// So well-known it doesn't even need an adapter.
 			return new DefaultPointcutAdvisor(advice);
 		}
+		// 如果存在 Advisor 的适配器，那么也同样需要进行封装
 		for (AdvisorAdapter adapter : this.adapters) {
 			// Check that it is supported.
 			if (adapter.supportsAdvice(advice)) {
