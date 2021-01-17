@@ -110,35 +110,47 @@ import org.springframework.util.StringUtils;
  */
 public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 
+	/**
+	 * 返回集合的 前缀
+	 */
 	private static final String RETURN_RESULT_SET_PREFIX = "#result-set-";
 
+	/**
+	 * 返回 更新 条数的 前缀
+	 */
 	private static final String RETURN_UPDATE_COUNT_PREFIX = "#update-count-";
 
 
 	/**
 	 * If this variable is false, we will throw exceptions on SQL warnings.
+	 * 当这个参数是 false 时，遇到 SQL 警告我们会抛出异常。
 	 */
 	private boolean ignoreWarnings = true;
 
 	/**
+	 * 如果这个变量设置为 非负值，那么它将被用于 设置 查询查询处理语句 的 fetchSize 属性。
 	 * If this variable is set to a non-negative value, it will be used for setting the
 	 * fetchSize property on statements used for query processing.
 	 */
 	private int fetchSize = -1;
 
 	/**
+	 * 如果这个变量设置为 非负值，那么它将被用于 设置 查询处理语句 的 maxRows 属性。
 	 * If this variable is set to a non-negative value, it will be used for setting the
 	 * maxRows property on statements used for query processing.
 	 */
 	private int maxRows = -1;
 
 	/**
+	 * 如果这个变量设置为 非负值，那么它将被用于 设置 查询处理语句 的 queryTimeout 属性。
 	 * If this variable is set to a non-negative value, it will be used for setting the
 	 * queryTimeout property on statements used for query processing.
 	 */
 	private int queryTimeout = -1;
 
 	/**
+	 * 如果此变量设置为 true，则所有 执行语句的结果 都将忽略检查。
+	 * 这可以用来避免一些旧的 oracle jdbc 驱动程序（如10.1.0.2）中的bug。
 	 * If this variable is set to true, then all results checking will be bypassed for any
 	 * callable statement processing. This can be used to avoid a bug in some older Oracle
 	 * JDBC drivers like 10.1.0.2.
@@ -146,6 +158,8 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	private boolean skipResultsProcessing = false;
 
 	/**
+	 * 如果此变量设置为 true，则没有响应的 Sql OutParameter 声明的 存储过程的执行结果将会被忽略。
+	 * 除非变量 skipUndeclaredResults 设置为 true，否则 将处理其它所有的结果。
 	 * If this variable is set to true then all results from a stored procedure call
 	 * that don't have a corresponding SqlOutParameter declaration will be bypassed.
 	 * All other results processing will be take place unless the variable
@@ -154,6 +168,7 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	private boolean skipUndeclaredResults = false;
 
 	/**
+	 * 如果此变量设置为 true，则可执行语句的执行结果将会是 大小写敏感的 Map 集合。
 	 * If this variable is set to true then execution of a CallableStatement will return
 	 * the results in a Map that uses case insensitive names for the parameters.
 	 */
@@ -163,6 +178,7 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	/**
 	 * Construct a new JdbcTemplate for bean usage.
 	 * <p>Note: The DataSource has to be set before using the instance.
+	 * <p>注意：使用 JdbcTemplate 实例前，需要设置好 DataSource 数据源。</p>
 	 *
 	 * @see #setDataSource
 	 */
@@ -170,6 +186,7 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	}
 
 	/**
+	 * 构造一个 JdbcTemplate 实例，赋予一个 获取连接的 数据源。
 	 * Construct a new JdbcTemplate, given a DataSource to obtain connections from.
 	 * <p>Note: This will not trigger initialization of the exception translator.
 	 *
@@ -181,6 +198,8 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	}
 
 	/**
+	 * 构造一个 JdbcTemplate 实例，赋予一个 获取连接的 数据源。
+	 * <p>
 	 * Construct a new JdbcTemplate, given a DataSource to obtain connections from.
 	 * <p>Note: Depending on the "lazyInit" flag, initialization of the exception translator
 	 * will be triggered.
@@ -196,6 +215,9 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 
 
 	/**
+	 * 设置 是否忽略 SQL 的警告。
+	 * 默认为 "true"，记录所有警告。设置为 "false"，警告时，JdbcTemplate 将会抛出 SQLWarningException 。
+	 * <p>
 	 * Set whether or not we want to ignore SQLWarnings.
 	 * <p>Default is "true", swallowing and logging all warnings. Switch this flag
 	 * to "false" to make the JdbcTemplate throw an SQLWarningException instead.
@@ -216,6 +238,10 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	}
 
 	/**
+	 * 设置 JdbcTemplate 的 fetch size属性，这对处理 大型结果集 非常重要：将此值设置为高于默认值，
+	 * 将以内存消耗为代价提高处理速度；将此值设置为低于默认值，可以避免传输应用程序永远不会读取的行数据。、
+	 * 默认值是 -1.
+	 * <p>
 	 * Set the fetch size for this JdbcTemplate. This is important for processing large
 	 * result sets: Setting this higher than the default value will increase processing
 	 * speed at the cost of memory consumption; setting this lower can avoid transferring
@@ -239,6 +265,11 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	}
 
 	/**
+	 * 设置 JdbcTemplate 的最大 行数。这对于处理大型结果集的子集非常重要，
+	 * 如果我们对整个结果不感兴趣，那么就避免在数据库 或 JDBC 驱动程序 中 读取和保存整个结果集。
+	 * （例如，在执行可能返回大量匹配项的搜索时。）
+	 * 默认值是 -1，表示使用JDBC驱动程序的默认配置。即 不将特定的max rows设置传递给驱动程序。
+	 * <p>
 	 * Set the maximum number of rows for this JdbcTemplate. This is important for
 	 * processing subsets of large result sets, avoiding to read and hold the entire
 	 * result set in the database or in the JDBC driver if we're never interested in
@@ -263,6 +294,9 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	}
 
 	/**
+	 * 设置 JdbcTemplate 执行语句的 超时时间。默认是 -1，表明使用 JDBC 驱动的默认值。
+	 * 即 驱动器上不设置 超时时间。
+	 * <p>
 	 * Set the query timeout for statements that this JdbcTemplate executes.
 	 * <p>Default is -1, indicating to use the JDBC driver's default
 	 * (i.e. to not pass a specific query timeout setting on the driver).
@@ -284,6 +318,8 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	}
 
 	/**
+	 * 设置 是否进行 执行结果的处理 。当我们知道没有结果被传回时，可以用来优化可调用语句的处理 — out参数
+	 * 的处理仍将进行。这可以用来避免一些旧的 oracle jdbc 驱动程序（如10.1.0.2）中的 bug。
 	 * Set whether results processing should be skipped. Can be used to optimize callable
 	 * statement processing when we know that no results are being passed back - the processing
 	 * of out parameter will still take place. This can be used to avoid a bug in some older
@@ -301,6 +337,7 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	}
 
 	/**
+	 * 设置是否应跳过未声明的结果。
 	 * Set whether undeclared results should be skipped.
 	 */
 	public void setSkipUndeclaredResults(boolean skipUndeclaredResults) {
