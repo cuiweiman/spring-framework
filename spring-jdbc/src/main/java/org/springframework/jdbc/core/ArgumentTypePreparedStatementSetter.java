@@ -42,7 +42,8 @@ public class ArgumentTypePreparedStatementSetter implements PreparedStatementSet
 
 	/**
 	 * Create a new ArgTypePreparedStatementSetter for the given arguments.
-	 * @param args the arguments to set
+	 *
+	 * @param args     the arguments to set
 	 * @param argTypes the corresponding SQL types of the arguments
 	 */
 	public ArgumentTypePreparedStatementSetter(@Nullable Object[] args, @Nullable int[] argTypes) {
@@ -59,25 +60,28 @@ public class ArgumentTypePreparedStatementSetter implements PreparedStatementSet
 	public void setValues(PreparedStatement ps) throws SQLException {
 		int parameterPosition = 1;
 		if (this.args != null && this.argTypes != null) {
+			// 遍历 每个参数 来做 类型匹配与转换。
 			for (int i = 0; i < this.args.length; i++) {
 				Object arg = this.args[i];
+				// 如果 参数 是一个 集合类，那么需要 进入集合类 内部 递归解析 集合内部的属性值。
 				if (arg instanceof Collection && this.argTypes[i] != Types.ARRAY) {
 					Collection<?> entries = (Collection<?>) arg;
 					for (Object entry : entries) {
+						// 集合类 的 属性值 是一个 对象数组。
 						if (entry instanceof Object[]) {
 							Object[] valueArray = ((Object[]) entry);
 							for (Object argValue : valueArray) {
 								doSetValue(ps, parameterPosition, this.argTypes[i], argValue);
 								parameterPosition++;
 							}
-						}
-						else {
+						} else {
+							// 对单个参数 及 类型 的匹配处理
 							doSetValue(ps, parameterPosition, this.argTypes[i], entry);
 							parameterPosition++;
 						}
 					}
-				}
-				else {
+				} else {
+					// 参数 不是一个集合类，直接 解析当前属性值。对单个参数 及 类型 的匹配处理。
 					doSetValue(ps, parameterPosition, this.argTypes[i], arg);
 					parameterPosition++;
 				}
@@ -86,12 +90,17 @@ public class ArgumentTypePreparedStatementSetter implements PreparedStatementSet
 	}
 
 	/**
+	 * 对单个参数 及 类型 的匹配处理
+	 * <p>
+	 * 使用 传入的值和类型 为 准备语句 的 指定参数位置 设置值。如果需要，可以用子类重写此方法。
+	 * <p>
 	 * Set the value for the prepared statement's specified parameter position using the passed in
 	 * value and type. This method can be overridden by sub-classes if needed.
-	 * @param ps the PreparedStatement
+	 *
+	 * @param ps                the PreparedStatement
 	 * @param parameterPosition index of the parameter position
-	 * @param argType the argument type
-	 * @param argValue the argument value
+	 * @param argType           the argument type
+	 * @param argValue          the argument value
 	 * @throws SQLException if thrown by PreparedStatement methods
 	 */
 	protected void doSetValue(PreparedStatement ps, int parameterPosition, int argType, Object argValue)

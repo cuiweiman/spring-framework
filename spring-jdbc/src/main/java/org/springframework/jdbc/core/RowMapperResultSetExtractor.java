@@ -51,12 +51,12 @@ import org.springframework.util.Assert;
  * package: Instead of working with separate JdbcTemplate and RowMapper objects,
  * you can have executable query objects (containing row-mapping logic) there.
  *
- * @author Juergen Hoeller
- * @since 1.0.2
  * @param <T> the result element type
+ * @author Juergen Hoeller
  * @see RowMapper
  * @see JdbcTemplate
  * @see org.springframework.jdbc.object.MappingSqlQuery
+ * @since 1.0.2
  */
 public class RowMapperResultSetExtractor<T> implements ResultSetExtractor<List<T>> {
 
@@ -67,6 +67,7 @@ public class RowMapperResultSetExtractor<T> implements ResultSetExtractor<List<T
 
 	/**
 	 * Create a new RowMapperResultSetExtractor.
+	 *
 	 * @param rowMapper the RowMapper which creates an object for each row
 	 */
 	public RowMapperResultSetExtractor(RowMapper<T> rowMapper) {
@@ -75,9 +76,10 @@ public class RowMapperResultSetExtractor<T> implements ResultSetExtractor<List<T
 
 	/**
 	 * Create a new RowMapperResultSetExtractor.
-	 * @param rowMapper the RowMapper which creates an object for each row
+	 *
+	 * @param rowMapper    the RowMapper which creates an object for each row
 	 * @param rowsExpected the number of expected rows
-	 * (just used for optimized collection handling)
+	 *                     (just used for optimized collection handling)
 	 */
 	public RowMapperResultSetExtractor(RowMapper<T> rowMapper, int rowsExpected) {
 		Assert.notNull(rowMapper, "RowMapper is required");
@@ -86,11 +88,21 @@ public class RowMapperResultSetExtractor<T> implements ResultSetExtractor<List<T
 	}
 
 
+	/**
+	 * 额外 数据封装。负责将 查询结果 进行封装，并转换至 POJO。本类中已经封装了自定义的 RowMapper映射关系。
+	 *
+	 * @param rs the ResultSet to extract data from. Implementations should
+	 *           not close this: it will be closed by the calling JdbcTemplate.表单查询的结果。
+	 * @return 将 结果数据 转换成 POJO 并返回。
+	 * @throws SQLException 异常
+	 */
 	@Override
 	public List<T> extractData(ResultSet rs) throws SQLException {
+		// rowsExpected：期望的行数。
 		List<T> results = (this.rowsExpected > 0 ? new ArrayList<>(this.rowsExpected) : new ArrayList<>());
 		int rowNum = 0;
 		while (rs.next()) {
+			// 遍历查询结果，根据映射关系，转化成 POJO，存入 results 集合中。
 			results.add(this.rowMapper.mapRow(rs, rowNum++));
 		}
 		return results;
