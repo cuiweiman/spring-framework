@@ -20,6 +20,8 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.Aware;
 
 /**
+ * 实现此接口的 对象，将被注册到其所在 Spring 容器的上下文中 {@link ApplicationContext}
+ * <p>
  * Interface to be implemented by any object that wishes to be notified
  * of the {@link ApplicationContext} that it runs in.
  *
@@ -66,9 +68,10 @@ public interface ApplicationContextAware extends Aware {
 	 * or a custom init-method. Invoked after {@link ResourceLoaderAware#setResourceLoader},
 	 * {@link ApplicationEventPublisherAware#setApplicationEventPublisher} and
 	 * {@link MessageSourceAware}, if applicable.
+	 *
 	 * @param applicationContext the ApplicationContext object to be used by this object
 	 * @throws ApplicationContextException in case of context initialization errors
-	 * @throws BeansException if thrown by application context methods
+	 * @throws BeansException              if thrown by application context methods
 	 * @see org.springframework.beans.factory.BeanInitializationException
 	 */
 	void setApplicationContext(ApplicationContext applicationContext) throws BeansException;

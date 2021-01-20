@@ -17,6 +17,10 @@
 package org.springframework.beans.factory;
 
 /**
+ * 在 Spring 容器（即 BeanFactory） 设置完 bean 所有属性之后，将会触发本接口的{@link #afterPropertiesSet()}方法。
+ * <p>
+ * 被 bean 实现的接口，这些bean需要在{@link BeanFactory}设置完它们的所有属性后做出反应：例如，执行自定义初始化，或者仅仅检查是否设置了所有必需的属性。
+ * <p>
  * Interface to be implemented by beans that need to react once all their properties
  * have been set by a {@link BeanFactory}: e.g. to perform custom initialization,
  * or merely to check that all mandatory properties have been set.
@@ -38,8 +42,9 @@ public interface InitializingBean {
 	 * and satisfied {@link BeanFactoryAware}, {@code ApplicationContextAware} etc.
 	 * <p>This method allows the bean instance to perform validation of its overall
 	 * configuration and final initialization when all bean properties have been set.
+	 *
 	 * @throws Exception in the event of misconfiguration (such as failure to set an
-	 * essential property) or if initialization fails for any other reason
+	 *                   essential property) or if initialization fails for any other reason
 	 */
 	void afterPropertiesSet() throws Exception;
 

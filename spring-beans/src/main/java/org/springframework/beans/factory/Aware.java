@@ -17,6 +17,12 @@
 package org.springframework.beans.factory;
 
 /**
+ * 一个标记超接口，表明 bean 有资格使用 回调风格的方法被 Spring 容器通知给特定的框架对象。
+ * 实际的方法实现由子接口确定，但通常只应由一个接受单个参数的void返回方法组成（即 void声明的方法，并且只允许一个入参）。
+ * <p>
+ * 注意：只是实现 Aware 接口并不能提供默认功能，相反，必须显示地处理。
+ *
+ * <p>
  * A marker superinterface indicating that a bean is eligible to be notified by the
  * Spring container of a particular framework object through a callback-style method.
  * The actual method signature is determined by individual subinterfaces but should
