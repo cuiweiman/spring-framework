@@ -21,6 +21,18 @@ import org.w3c.dom.Element;
 import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
 
 /**
+ * 事务管理 入口类：{@link #init()}
+ * <p>
+ * {@code NamespaceHandler} 允许使用 XML配置文件 或者使用 注释配置声明性事务管理。
+ * <p>
+ * 这个名称空间处理程序是 Spring 事务管理工具的核心功能，它提供了两种 声明式管理事务 的方法。
+ * <p>
+ * 一种方法使用 XML 中定义的事务语义，使用 {@code <tx:advice>} 标签配置；
+ * 另一个将注释与 <tx:annotation-driven> 元素结合使用。
+ * 这两种方法在Spring参考手册中都有详细的介绍。
+ * <p>
+ * <tx:annotation-driven> 标签解析器：{@link AnnotationDrivenBeanDefinitionParser}
+ * <p>
  * {@code NamespaceHandler} allowing for the configuration of
  * declarative transaction management using either XML or using annotations.
  *
@@ -53,6 +65,7 @@ public class TxNamespaceHandler extends NamespaceHandlerSupport {
 	@Override
 	public void init() {
 		registerBeanDefinitionParser("advice", new TxAdviceBeanDefinitionParser());
+		// 注册 <tx:annotation-driven> 标签解析器
 		registerBeanDefinitionParser("annotation-driven", new AnnotationDrivenBeanDefinitionParser());
 		registerBeanDefinitionParser("jta-transaction-manager", new JtaTransactionManagerBeanDefinitionParser());
 	}

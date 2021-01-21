@@ -52,6 +52,12 @@ public abstract class AopNamespaceUtils {
 	private static final String EXPOSE_PROXY_ATTRIBUTE = "expose-proxy";
 
 
+	/**
+	 * 主要注册 {@link org.springframework.aop.framework.autoproxy.InfrastructureAdvisorAutoProxyCreator} 类型的 bean。
+	 *
+	 * @param parserContext 解析后的上下文？
+	 * @param sourceElement 标签元素
+	 */
 	public static void registerAutoProxyCreatorIfNecessary(
 			ParserContext parserContext, Element sourceElement) {
 

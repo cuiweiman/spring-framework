@@ -307,6 +307,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		if (bean != null) {
 			// 根据给定的 bean 的 class 和 name，构建出一个 key，格式：beanClassName_beanName
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
+			// 是否是 为了避免循环依赖 而 创建的 bean 代理
 			if (this.earlyProxyReferences.remove(cacheKey) != bean) {
 				// 如果它合适被代理，则需要封装指定 bean
 				return wrapIfNecessary(bean, beanName, cacheKey);
@@ -340,6 +341,9 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	/**
 	 * 如有必要则包装给定的bean，如：它适合被代理。
 	 * <p>
+	 * 1. 找出指定 bean 对应的 增强器；
+	 * 2. 根据找出的 增强器 创建 代理。
+	 * <p>
 	 * 获取增强方法，或者增强器：{@link AbstractAdvisorAutoProxyCreator#getAdvicesAndAdvisorsForBean(java.lang.Class, java.lang.String, org.springframework.aop.TargetSource)}
 	 * <p>
 	 * Wrap the given bean if necessary, i.e. if it is eligible for being proxied.
@@ -364,7 +368,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			return bean;
 		}
 
-		// 如果存在增强的方法（如果被 advice），那么就创建代理
+		// 如果存在增强的方法（如果被 advice），那么就创建代理。获取 class/method 的增强器。
 		// Create proxy if we have advice.
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
 		// 如果获取到了 增强，则需要针对增强创建 代理

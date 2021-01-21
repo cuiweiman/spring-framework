@@ -16,22 +16,24 @@
 
 package org.springframework.transaction.interceptor;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.util.Properties;
-
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionManager;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.Properties;
+
 /**
+ * TransactionInterceptor 支撑着 整个事务功能 的架构，逻辑实现相对复杂。
+ * 本类继承自 MethodInterceptor，所以入口方法是 {@link #invoke(MethodInvocation)}
+ * <p>
  * AOP Alliance MethodInterceptor for declarative transaction
  * management using the common Spring transaction infrastructure
  * ({@link org.springframework.transaction.PlatformTransactionManager}/
@@ -56,6 +58,7 @@ public class TransactionInterceptor extends TransactionAspectSupport implements 
 	/**
 	 * Create a new TransactionInterceptor.
 	 * <p>Transaction manager and transaction attributes still need to be set.
+	 *
 	 * @see #setTransactionManager
 	 * @see #setTransactionAttributes(java.util.Properties)
 	 * @see #setTransactionAttributeSource(TransactionAttributeSource)
@@ -65,11 +68,12 @@ public class TransactionInterceptor extends TransactionAspectSupport implements 
 
 	/**
 	 * Create a new TransactionInterceptor.
+	 *
 	 * @param ptm the default transaction manager to perform the actual transaction management
 	 * @param tas the attribute source to be used to find transaction attributes
-	 * @since 5.2.5
 	 * @see #setTransactionManager
 	 * @see #setTransactionAttributeSource
+	 * @since 5.2.5
 	 */
 	public TransactionInterceptor(TransactionManager ptm, TransactionAttributeSource tas) {
 		setTransactionManager(ptm);
@@ -78,6 +82,7 @@ public class TransactionInterceptor extends TransactionAspectSupport implements 
 
 	/**
 	 * Create a new TransactionInterceptor.
+	 *
 	 * @param ptm the default transaction manager to perform the actual transaction management
 	 * @param tas the attribute source to be used to find transaction attributes
 	 * @see #setTransactionManager
@@ -93,7 +98,8 @@ public class TransactionInterceptor extends TransactionAspectSupport implements 
 
 	/**
 	 * Create a new TransactionInterceptor.
-	 * @param ptm the default transaction manager to perform the actual transaction management
+	 *
+	 * @param ptm        the default transaction manager to perform the actual transaction management
 	 * @param attributes the transaction attributes in properties format
 	 * @see #setTransactionManager
 	 * @see #setTransactionAttributes(java.util.Properties)

@@ -178,6 +178,8 @@ public abstract class DataSourceUtils {
 	}
 
 	/**
+	 * 负责 对 底层数据库连接的设置。
+	 * <p>
 	 * Prepare the given Connection with the given transaction semantics.
 	 *
 	 * @param con        the Connection to prepare
@@ -196,6 +198,7 @@ public abstract class DataSourceUtils {
 
 		boolean debugEnabled = logger.isDebugEnabled();
 		// Set read-only flag.
+		// 设置 数据库连接的 只读标识。
 		if (definition != null && definition.isReadOnly()) {
 			try {
 				if (debugEnabled) {
@@ -216,6 +219,7 @@ public abstract class DataSourceUtils {
 			}
 		}
 
+		// 设置 数据库 连接的 隔离级别。
 		// Apply specific isolation level, if any.
 		Integer previousIsolationLevel = null;
 		if (definition != null && definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT) {

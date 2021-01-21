@@ -73,6 +73,8 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	/**
 	 * 获取增强方法的实现逻辑
 	 * <p>
+	 * 获取对应 class/method 的增强器
+	 * <p>
 	 * 获取 指定 bean 的 增强方法包含两步：
 	 * 1. 获取所有的增强
 	 * 2. 寻找所有增强方法中，适用于 指定 bean 的增强，并应用到指定的 bean。

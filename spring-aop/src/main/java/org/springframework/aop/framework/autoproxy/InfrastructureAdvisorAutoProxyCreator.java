@@ -18,9 +18,14 @@ package org.springframework.aop.framework.autoproxy;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
+import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.lang.Nullable;
 
 /**
+ * 本类 间接实现了 {@link SmartInstantiationAwareBeanPostProcessor} 接口 和 {@link InstantiationAwareBeanPostProcessor} 接口。
+ * 可以分析出，本类在 bean 初始化 时，会执行{@link AbstractAutoProxyCreator#postProcessAfterInitialization(java.lang.Object, java.lang.String)}方法。
+ * <p>
  * Auto-proxy creator that considers infrastructure Advisor beans only,
  * ignoring any application-defined Advisors.
  *
