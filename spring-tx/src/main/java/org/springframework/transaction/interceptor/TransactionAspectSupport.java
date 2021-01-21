@@ -669,11 +669,19 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 	}
 
 	/**
+	 * 异常回滚de处理逻辑
+	 * <p>
+	 * 在目标方法执行时，一旦出现 Throwable 就会被引导至此方法处理。但并不代表所有的 Throwable 都会被回滚处理，如Exception，默认
+	 * 不会被处理。
+	 * 如果不符合回滚规则，那么即使出现异常，数据也会被正常提交。：txInfo.getTransactionManager().commit(txInfo.getTransactionStatus());
+	 * <p>
 	 * Handle a throwable, completing the transaction.
 	 * We may commit or roll back, depending on the configuration.
 	 *
 	 * @param txInfo information about the current transaction
 	 * @param ex     throwable encountered
+	 * @see DefaultTransactionAttribute#rollbackOn(java.lang.Throwable) 根据配置的回滚规则，判断是否满足回滚条件
+	 * @see AbstractPlatformTransactionManager#rollback(org.springframework.transaction.TransactionStatus) 回滚方法
 	 */
 	protected void completeTransactionAfterThrowing(@Nullable TransactionInfo txInfo, Throwable ex) {
 		if (txInfo != null && txInfo.getTransactionStatus() != null) {
@@ -681,8 +689,10 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 				logger.trace("Completing transaction for [" + txInfo.getJoinpointIdentification() +
 						"] after exception: " + ex);
 			}
+			// 首先判断 当前线程中 具有事务，并且 抛出的异常是否是 RuntimeException 或者 Error 类型。
 			if (txInfo.transactionAttribute != null && txInfo.transactionAttribute.rollbackOn(ex)) {
 				try {
+					// 根据 TransactionStatus 信息进行回滚处理
 					txInfo.getTransactionManager().rollback(txInfo.getTransactionStatus());
 				} catch (TransactionSystemException ex2) {
 					logger.error("Application exception overridden by rollback exception", ex);
@@ -693,6 +703,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 					throw ex2;
 				}
 			} else {
+				// 如果不满足条件，那么即使抛出异常，也同样会提交
 				// We don't roll back on this exception.
 				// Will still roll back if TransactionStatus.isRollbackOnly() is true.
 				try {
