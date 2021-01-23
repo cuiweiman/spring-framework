@@ -35,7 +35,6 @@ import org.springframework.transaction.TransactionUsageException;
  * underlying transaction object, and no transaction synchronization mechanism.
  *
  * @author Juergen Hoeller
- * @since 1.2.3
  * @see #setRollbackOnly()
  * @see #isRollbackOnly()
  * @see #setCompleted()
@@ -43,6 +42,7 @@ import org.springframework.transaction.TransactionUsageException;
  * @see #getSavepointManager()
  * @see SimpleTransactionStatus
  * @see DefaultTransactionStatus
+ * @since 1.2.3
  */
 public abstract class AbstractTransactionStatus implements TransactionStatus {
 
@@ -67,6 +67,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	 * Determine the rollback-only flag via checking both the local rollback-only flag
 	 * of this TransactionStatus and the global rollback-only flag of the underlying
 	 * transaction, if any.
+	 *
 	 * @see #isLocalRollbackOnly()
 	 * @see #isGlobalRollbackOnly()
 	 */
@@ -117,6 +118,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 
 	/**
 	 * Set a savepoint for this transaction. Useful for PROPAGATION_NESTED.
+	 *
 	 * @see org.springframework.transaction.TransactionDefinition#PROPAGATION_NESTED
 	 */
 	protected void setSavepoint(@Nullable Object savepoint) {
@@ -133,16 +135,23 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 
 	/**
 	 * Create a savepoint and hold it for the transaction.
-	 * @throws org.springframework.transaction.NestedTransactionNotSupportedException
-	 * if the underlying transaction does not support savepoints
+	 *
+	 * @throws org.springframework.transaction.NestedTransactionNotSupportedException if the underlying transaction does not support savepoints
 	 */
 	public void createAndHoldSavepoint() throws TransactionException {
 		setSavepoint(getSavepointManager().createSavepoint());
 	}
 
 	/**
+	 * 当之前 已经保存的事务信息中有保存点信息的时候，使用保存点信息进行回滚。常用于 嵌入式事务。
+	 * 对嵌入式事务的处理，内嵌的事务异常并不会引起外部事物的回滚。
+	 * <p>
+	 * 根据保存点回滚的实现方式，实际上就是根据底层的数据库连接进行的。
+	 * <p>
 	 * Roll back to the savepoint that is held for the transaction
 	 * and release the savepoint right afterwards.
+	 *
+	 * @see org.springframework.jdbc.datasource.JdbcTransactionObjectSupport#rollbackToSavepoint(java.lang.Object)
 	 */
 	public void rollbackToHeldSavepoint() throws TransactionException {
 		Object savepoint = getSavepoint();
@@ -150,6 +159,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 			throw new TransactionUsageException(
 					"Cannot roll back to savepoint - no savepoint associated with current transaction");
 		}
+		// 回滚到保存点
 		getSavepointManager().rollbackToSavepoint(savepoint);
 		getSavepointManager().releaseSavepoint(savepoint);
 		setSavepoint(null);
@@ -176,6 +186,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	/**
 	 * This implementation delegates to a SavepointManager for the
 	 * underlying transaction, if possible.
+	 *
 	 * @see #getSavepointManager()
 	 * @see SavepointManager#createSavepoint()
 	 */
@@ -187,6 +198,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	/**
 	 * This implementation delegates to a SavepointManager for the
 	 * underlying transaction, if possible.
+	 *
 	 * @see #getSavepointManager()
 	 * @see SavepointManager#rollbackToSavepoint(Object)
 	 */
@@ -198,6 +210,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	/**
 	 * This implementation delegates to a SavepointManager for the
 	 * underlying transaction, if possible.
+	 *
 	 * @see #getSavepointManager()
 	 * @see SavepointManager#releaseSavepoint(Object)
 	 */
@@ -209,8 +222,8 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	/**
 	 * Return a SavepointManager for the underlying transaction, if possible.
 	 * <p>Default implementation always throws a NestedTransactionNotSupportedException.
-	 * @throws org.springframework.transaction.NestedTransactionNotSupportedException
-	 * if the underlying transaction does not support savepoints
+	 *
+	 * @throws org.springframework.transaction.NestedTransactionNotSupportedException if the underlying transaction does not support savepoints
 	 */
 	protected SavepointManager getSavepointManager() {
 		throw new NestedTransactionNotSupportedException("This transaction does not support savepoints");

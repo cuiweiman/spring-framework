@@ -409,7 +409,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 				}
 			}
 
-			// 提交事务
+			// 提交事务（没有异常发生）
 			commitTransactionAfterReturning(txInfo);
 			return retVal;
 		} else {
@@ -654,10 +654,13 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 	}
 
 	/**
+	 * 事务提交处理。即使没有异常被捕获，也不一定会执行提交任务。
+	 * <p>
 	 * Execute after successful completion of call, but not after an exception was handled.
 	 * Do nothing if we didn't create a transaction.
 	 *
 	 * @param txInfo information about the current transaction
+	 * @see AbstractPlatformTransactionManager#commit(org.springframework.transaction.TransactionStatus)
 	 */
 	protected void commitTransactionAfterReturning(@Nullable TransactionInfo txInfo) {
 		if (txInfo != null && txInfo.getTransactionStatus() != null) {
