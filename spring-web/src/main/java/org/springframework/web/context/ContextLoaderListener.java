@@ -16,11 +16,14 @@
 
 package org.springframework.web.context;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
 /**
- * Spring MVC 功能的实现 入口，web.xml文件中重要配置的功能。本类的作用是，
+ * 由于实现了 ServletContextListener 接口，因此在 ServletContext 启动后，会自动执行 {@link #contextInitialized(ServletContextEvent)}方法。
+ * <p>
+ * Spring MVC 功能的实现 辅助功能（真正的逻辑实现是 {@link org.springframework.web.servlet.DispatcherServlet}），web.xml文件中重要配置的功能。本类的作用是，
  * 在启动 Web 容器时，自动装配 ApplicationContext 的配置信息。因为它实现了 ServletContextListener 接口，在web.xml
  * 配置这个监听器，那么启动容器时，就会默认执行它实现的方法。使用 ServletContextListener 接口，开发者能够在为客户端请求
  * 提供服务之前，向ServletContext 中添加任意对象。这个对象在ServletContext 启动时就被初始化，然后在 ServletContext 的
@@ -70,6 +73,7 @@ import javax.servlet.ServletContextListener;
  * @author Chris Beams
  * @see #setContextInitializers
  * @see org.springframework.web.WebApplicationInitializer
+ * @see ServletContextListener：在系统启动时，添加自定义的属性，以便在全局范围内调用（系统启动时，回调用{@link ServletContextListener#contextInitialized(ServletContextEvent)}方法）。
  * @since 17.02.2003
  */
 public class ContextLoaderListener extends ContextLoader implements ServletContextListener {
@@ -136,10 +140,17 @@ public class ContextLoaderListener extends ContextLoader implements ServletConte
 
 
 	/**
+	 * 初始化 WebApplicationContext 。
+	 * 在Web 应用中，我们会用到 WebApplicationContext，继承自 ApplicationContext，并且在其基础上又追加了一些特定于
+	 * Web 的操作和属性。类似于 ClassPathXmlApplicationContext。
+	 * <p>
 	 * Initialize the root web application context.
+	 *
+	 * @see #initWebApplicationContext(ServletContext)
 	 */
 	@Override
 	public void contextInitialized(ServletContextEvent event) {
+		// 初始化 WebApplicationContext 。
 		initWebApplicationContext(event.getServletContext());
 	}
 
