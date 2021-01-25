@@ -35,8 +35,14 @@ import org.springframework.util.ClassUtils;
  */
 public abstract class RemoteExporter extends RemotingSupport {
 
+	/**
+	 * 将要 暴露出去的 服务
+	 */
 	private Object service;
 
+	/**
+	 * 将要 暴露出去的 服务的接口
+	 */
 	private Class<?> serviceInterface;
 
 	private Boolean registerTraceInterceptor;
