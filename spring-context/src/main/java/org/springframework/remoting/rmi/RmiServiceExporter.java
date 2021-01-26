@@ -109,8 +109,14 @@ public class RmiServiceExporter extends RmiBasedExporter implements Initializing
 	 */
 	private RMIServerSocketFactory serverSocketFactory;
 
+	/**
+	 * 注册器
+	 */
 	private Registry registry;
 
+	/**
+	 * 注册主机地址
+	 */
 	private String registryHost;
 
 	/**
@@ -118,20 +124,37 @@ public class RmiServiceExporter extends RmiBasedExporter implements Initializing
 	 */
 	private int registryPort = Registry.REGISTRY_PORT;
 
+	/**
+	 * 客户端 服务注册 socket 工厂
+	 */
 	private RMIClientSocketFactory registryClientSocketFactory;
 
+	/**
+	 * 服务端 服务注册 socket 工厂
+	 */
 	private RMIServerSocketFactory registryServerSocketFactory;
 
+	/**
+	 * 总是 创建时注册。
+	 * 设置 是否总是创建 注册器，而不是试图查找指定端口上已有的 注册器
+	 */
 	private boolean alwaysCreateRegistry = false;
 
+	/**
+	 * 替换已有绑定
+	 */
 	private boolean replaceExistingBinding = true;
 
+	/**
+	 * 要暴露的远程对象/导出的远程对象
+	 */
 	private Remote exportedObject;
 
 	private boolean createdRegistry = false;
 
 
 	/**
+	 * 注入 服务端配置的 RMI 导出服务名称，格式为 rmi://host:post/name
 	 * Set the name of the exported RMI service,
 	 * i.e. {@code rmi://host:port/NAME}
 	 */
@@ -413,13 +436,16 @@ public class RmiServiceExporter extends RmiBasedExporter implements Initializing
 
 		if (registryHost != null) {
 			// Host explicitly specified: only lookup possible.
+			// 远程连接测试
 			if (logger.isDebugEnabled()) {
 				logger.debug("Looking for RMI registry at port '" + registryPort + "' of host [" + registryHost + "]");
 			}
+			// ★★ 如果 registryHost 不为空，则尝试获取 对应 的 远程主机的  Registry。
 			Registry reg = LocateRegistry.getRegistry(registryHost, registryPort, clientSocketFactory);
 			testRegistry(reg);
 			return reg;
 		} else {
+			// ★★ 获取本机的 Registry
 			return getRegistry(registryPort, clientSocketFactory, serverSocketFactory);
 		}
 	}
@@ -439,15 +465,19 @@ public class RmiServiceExporter extends RmiBasedExporter implements Initializing
 
 		if (clientSocketFactory != null) {
 			if (this.alwaysCreateRegistry) {
+				// 如果 alwaysCreateRegistry 为 true，重新创建 Registry，而不是复用。
 				logger.debug("Creating new RMI registry");
+				// 使用 clientSocketFactory  创建 Registry 实例
 				return LocateRegistry.createRegistry(registryPort, clientSocketFactory, serverSocketFactory);
 			}
 			if (logger.isDebugEnabled()) {
 				logger.debug("Looking for RMI registry at port '" + registryPort + "', using custom socket factory");
 			}
+
 			synchronized (LocateRegistry.class) {
 				try {
 					// Retrieve existing registry.
+					// 尝试获取 存在的 Registry 实例。复用测试
 					Registry reg = LocateRegistry.getRegistry(null, registryPort, clientSocketFactory);
 					testRegistry(reg);
 					return reg;
@@ -459,11 +489,13 @@ public class RmiServiceExporter extends RmiBasedExporter implements Initializing
 				}
 			}
 		} else {
+			// 客户端套接字 为空，即不需要使用自定义的 客户端套接字。
 			return getRegistry(registryPort);
 		}
 	}
 
 	/**
+	 * 本地创建或者复用 Registry，且 不需要使用自定义套接字
 	 * Locate or create the RMI registry for this exporter.
 	 *
 	 * @param registryPort the registry port to use
@@ -472,6 +504,7 @@ public class RmiServiceExporter extends RmiBasedExporter implements Initializing
 	 */
 	protected Registry getRegistry(int registryPort) throws RemoteException {
 		if (this.alwaysCreateRegistry) {
+			// 复用检测，若 alwaysCreateRegistry=true，则总是创建新的 alwaysCreateRegistry；否则尝试复用已有的。
 			logger.debug("Creating new RMI registry");
 			return LocateRegistry.createRegistry(registryPort);
 		}
@@ -481,13 +514,16 @@ public class RmiServiceExporter extends RmiBasedExporter implements Initializing
 		synchronized (LocateRegistry.class) {
 			try {
 				// Retrieve existing registry.
+				// 尝试获取 当前端口的 Registry。查看当前 注册端口 的 alwaysCreateRegistry 是否已经创建，如果已经创建则直接使用。
 				Registry reg = LocateRegistry.getRegistry(registryPort);
+				// 测试获取到的 Registry 是否可用，如果不可用则直接抛出异常。
 				testRegistry(reg);
 				return reg;
 			} catch (RemoteException ex) {
 				logger.trace("RMI registry access threw exception", ex);
 				logger.debug("Could not detect RMI registry - creating new one");
 				// Assume no registry found -> create new one.
+				// 根据端口 创建 Registry
 				return LocateRegistry.createRegistry(registryPort);
 			}
 		}
