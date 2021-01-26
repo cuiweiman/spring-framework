@@ -90,6 +90,7 @@ public abstract class RemoteExporter extends RemotingSupport {
 	 * is that it logs exception stacktraces on the server, before propagating an
 	 * exception to the client. Note that RemoteInvocationTraceInterceptor will <i>not</i>
 	 * be registered by default if the "interceptors" property has been specified.
+	 *
 	 * @see #setInterceptors
 	 * @see #getProxyForService
 	 * @see RemoteInvocationTraceInterceptor
@@ -103,6 +104,7 @@ public abstract class RemoteExporter extends RemotingSupport {
 	 * remote endpoint, e.g. a PerformanceMonitorInterceptor.
 	 * <p>You may specify any AOP Alliance MethodInterceptors or other
 	 * Spring AOP Advices, as well as Spring AOP Advisors.
+	 *
 	 * @see #getProxyForService
 	 * @see org.springframework.aop.interceptor.PerformanceMonitorInterceptor
 	 */
@@ -113,6 +115,7 @@ public abstract class RemoteExporter extends RemotingSupport {
 
 	/**
 	 * Check whether the service reference has been set.
+	 *
 	 * @see #setService
 	 */
 	protected void checkService() throws IllegalArgumentException {
@@ -122,6 +125,7 @@ public abstract class RemoteExporter extends RemotingSupport {
 	/**
 	 * Check whether a service reference has been set,
 	 * and whether it matches the specified service.
+	 *
 	 * @see #setServiceInterface
 	 * @see #setService
 	 */
@@ -148,19 +152,25 @@ public abstract class RemoteExporter extends RemotingSupport {
 	 * <p>Used to export a proxy that does not expose any internals but just
 	 * a specific interface intended for remote access. Furthermore, a
 	 * {@link RemoteInvocationTraceInterceptor} will be registered (by default).
+	 *
 	 * @return the proxy
 	 * @see #setServiceInterface
 	 * @see #setRegisterTraceInterceptor
 	 * @see RemoteInvocationTraceInterceptor
 	 */
 	protected Object getProxyForService() {
+		// 验证 service
 		checkService();
+		// 验证 serviceInterface
 		checkServiceInterface();
 
+		// 使用 JDK方式创建代理
 		ProxyFactory proxyFactory = new ProxyFactory();
+		// 添加代理接口
 		proxyFactory.addInterface(getServiceInterface());
 
 		if (this.registerTraceInterceptor != null ? this.registerTraceInterceptor : this.interceptors == null) {
+			// 加入代理的横切面 RemoteInvocationTraceInterceptor ，并记录 Exporter 名称
 			proxyFactory.addAdvice(new RemoteInvocationTraceInterceptor(getExporterName()));
 		}
 		if (this.interceptors != null) {
@@ -170,9 +180,11 @@ public abstract class RemoteExporter extends RemotingSupport {
 			}
 		}
 
+		// 设置要代理的目标类
 		proxyFactory.setTarget(getService());
 		proxyFactory.setOpaque(true);
 
+		// 创建代理
 		return proxyFactory.getProxy(getBeanClassLoader());
 	}
 
@@ -181,6 +193,7 @@ public abstract class RemoteExporter extends RemotingSupport {
 	 * Used for tracing of remote invocations.
 	 * <p>Default is the unqualified class name (without package).
 	 * Can be overridden in subclasses.
+	 *
 	 * @see #getProxyForService
 	 * @see RemoteInvocationTraceInterceptor
 	 * @see org.springframework.util.ClassUtils#getShortName

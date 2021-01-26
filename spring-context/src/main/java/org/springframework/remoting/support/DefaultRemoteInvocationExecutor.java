@@ -16,26 +16,36 @@
 
 package org.springframework.remoting.support;
 
-import java.lang.reflect.InvocationTargetException;
-
 import org.springframework.util.Assert;
+
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * Default implementation of the {@link RemoteInvocationExecutor} interface.
  * Simply delegates to {@link RemoteInvocation}'s invoke method.
  *
  * @author Juergen Hoeller
- * @since 1.1
  * @see RemoteInvocation#invoke
+ * @since 1.1
  */
 public class DefaultRemoteInvocationExecutor implements RemoteInvocationExecutor {
 
+	/**
+	 * @param invocation   the RemoteInvocation
+	 * @param targetObject the target object to apply the invocation to
+	 * @return 结果
+	 * @throws NoSuchMethodException     异常
+	 * @throws IllegalAccessException    异常
+	 * @throws InvocationTargetException 异常
+	 * @see RemoteInvocation#invoke(java.lang.Object)
+	 */
 	@Override
 	public Object invoke(RemoteInvocation invocation, Object targetObject)
-			throws NoSuchMethodException, IllegalAccessException, InvocationTargetException{
+			throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
 		Assert.notNull(invocation, "RemoteInvocation must not be null");
 		Assert.notNull(targetObject, "Target object must not be null");
+		// 通过反射方式激活方法
 		return invocation.invoke(targetObject);
 	}
 
