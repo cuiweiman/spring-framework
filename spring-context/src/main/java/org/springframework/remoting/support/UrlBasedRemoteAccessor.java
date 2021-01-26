@@ -46,6 +46,9 @@ public abstract class UrlBasedRemoteAccessor extends RemoteAccessor implements I
 	}
 
 
+	/**
+	 * 验证 serviceUrl 属性
+	 */
 	@Override
 	public void afterPropertiesSet() {
 		if (getServiceUrl() == null) {

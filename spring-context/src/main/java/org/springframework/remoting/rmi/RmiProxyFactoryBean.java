@@ -16,12 +16,18 @@
 
 package org.springframework.remoting.rmi;
 
+import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.FactoryBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.remoting.support.UrlBasedRemoteAccessor;
 import org.springframework.util.Assert;
 
 /**
+ * RMI 远程服务调用 客户端 入口类 。
+ * RMI 服务端实现 参见{@link RmiServiceExporter}
+ * <p>
  * {@link FactoryBean} for RMI proxies, supporting both conventional RMI services
  * and RMI invokers. Exposes the proxied service for use as a bean reference,
  * using the specified service interface. Proxies will throw Spring's unchecked
@@ -47,7 +53,6 @@ import org.springframework.util.Assert;
  * to combine Java serialization with HTTP-based transport.
  *
  * @author Juergen Hoeller
- * @since 13.05.2003
  * @see #setServiceInterface
  * @see #setServiceUrl
  * @see RmiClientInterceptor
@@ -57,21 +62,41 @@ import org.springframework.util.Assert;
  * @see org.springframework.remoting.RemoteAccessException
  * @see org.springframework.remoting.caucho.HessianProxyFactoryBean
  * @see org.springframework.remoting.httpinvoker.HttpInvokerProxyFactoryBean
+ * @see #afterPropertiesSet() 自定义初始化方法。实现了 {@link InitializingBean} 接口
+ * @see #getObject() 由于实现了 {@link FactoryBean}接口，在获取 bean 时，并不是直接获取 bean 实例，而是调用 getObject 方法。
+ * @see #invoke(MethodInvocation)
+ * @since 13.05.2003
  */
 public class RmiProxyFactoryBean extends RmiClientInterceptor implements FactoryBean<Object>, BeanClassLoaderAware {
 
 	private Object serviceProxy;
 
 
+	/**
+	 * 自定义初始化过程，创建 代理类，并使用当前类作为增强方法。
+	 * <p>
+	 * 自初始化时，创建了代理并将本身作为增强器加入了代理中（RmiProxyFactoryBean 间接实现了 MethodInterceptor 接口）
+	 * 如此，但客户端调用代理类的接口中的某个方法时，会首先执行 {@link RmiProxyFactoryBean#invoke(MethodInvocation)}方法进行增强
+	 *
+	 * @see RmiClientInterceptor#afterPropertiesSet()
+	 * @see #invoke(MethodInvocation)
+	 */
 	@Override
 	public void afterPropertiesSet() {
 		super.afterPropertiesSet();
 		Class<?> ifc = getServiceInterface();
 		Assert.notNull(ifc, "Property 'serviceInterface' is required");
+		// 根据设置的接口 创建代理，并使用当前类 this 作为增强器
 		this.serviceProxy = new ProxyFactory(ifc, this).getProxy(getBeanClassLoader());
 	}
 
 
+	/**
+	 * 在获取本类的实例时，实际上返回的是一个 代理类。代理类会使用当前 bean 作为增强器进行增强。
+	 * 也就是说调用 RmiProxyFactoryBean 的父类 {@link RmiClientInterceptor#invoke(MethodInvocation)}方法。
+	 *
+	 * @return 代理类
+	 */
 	@Override
 	public Object getObject() {
 		return this.serviceProxy;
