@@ -58,8 +58,8 @@ import org.springframework.util.Assert;
  *
  * @author Juergen Hoeller
  * @author Stephane Nicoll
- * @since 3.1
  * @see org.springframework.remoting.httpinvoker.SimpleHttpInvokerRequestExecutor
+ * @since 3.1
  */
 public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvokerRequestExecutor {
 
@@ -88,6 +88,7 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	/**
 	 * Create a new instance of the HttpComponentsClientHttpRequestFactory
 	 * with the given {@link HttpClient} instance.
+	 *
 	 * @param httpClient the HttpClient instance to use for this request executor
 	 */
 	public HttpComponentsHttpInvokerRequestExecutor(HttpClient httpClient) {
@@ -133,6 +134,7 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	 * A timeout value of 0 specifies an infinite timeout.
 	 * <p>Additional properties can be configured by specifying a
 	 * {@link RequestConfig} instance on a custom {@link HttpClient}.
+	 *
 	 * @param timeout the timeout value in milliseconds
 	 * @see RequestConfig#getConnectTimeout()
 	 */
@@ -147,6 +149,7 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	 * A timeout value of 0 specifies an infinite timeout.
 	 * <p>Additional properties can be configured by specifying a
 	 * {@link RequestConfig} instance on a custom {@link HttpClient}.
+	 *
 	 * @param connectionRequestTimeout the timeout value to request a connection in milliseconds
 	 * @see RequestConfig#getConnectionRequestTimeout()
 	 */
@@ -159,6 +162,7 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	 * A timeout value of 0 specifies an infinite timeout.
 	 * <p>Additional properties can be configured by specifying a
 	 * {@link RequestConfig} instance on a custom {@link HttpClient}.
+	 *
 	 * @param timeout the timeout value in milliseconds
 	 * @see #DEFAULT_READ_TIMEOUT_MILLISECONDS
 	 * @see RequestConfig#getSocketTimeout()
@@ -177,6 +181,7 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	 * Execute the given request through the HttpClient.
 	 * <p>This method implements the basic processing workflow:
 	 * The actual work happens in this class's template methods.
+	 *
 	 * @see #createHttpPost
 	 * @see #setRequestBody
 	 * @see #executeHttpPost
@@ -188,15 +193,20 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 			HttpInvokerClientConfiguration config, ByteArrayOutputStream baos)
 			throws IOException, ClassNotFoundException {
 
+		// ★★ 创建 HttpPost
 		HttpPost postMethod = createHttpPost(config);
+		// ★★ 设置含有方法的 输出流 到 HttpPost 中
 		setRequestBody(config, postMethod, baos);
 		try {
+			// ★★ 执行远程方法，并等待结果相应
 			HttpResponse response = executeHttpPost(config, getHttpClient(), postMethod);
+			// ★★ 远程相应验证
 			validateResponse(config, response);
+			// ★★ 提取返回的 输入流
 			InputStream responseBody = getResponseBody(config, response);
+			// ★★ 从输入流中 提取结果
 			return readRemoteInvocationResult(responseBody, config.getCodebaseUrl());
-		}
-		finally {
+		} finally {
 			postMethod.releaseConnection();
 		}
 	}
@@ -205,12 +215,14 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	 * Create an HttpPost for the given configuration.
 	 * <p>The default implementation creates a standard HttpPost with
 	 * "application/x-java-serialized-object" as "Content-Type" header.
+	 *
 	 * @param config the HTTP invoker configuration that specifies the
-	 * target service
+	 *               target service
 	 * @return the HttpPost instance
 	 * @throws java.io.IOException if thrown by I/O methods
 	 */
 	protected HttpPost createHttpPost(HttpInvokerClientConfiguration config) throws IOException {
+		// 设置要访问的 url
 		HttpPost httpPost = new HttpPost(config.getServiceUrl());
 
 		RequestConfig requestConfig = createRequestConfig(config);
@@ -222,11 +234,13 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 		if (localeContext != null) {
 			Locale locale = localeContext.getLocale();
 			if (locale != null) {
+				// 加入 Accept-Language 属性
 				httpPost.addHeader(HTTP_HEADER_ACCEPT_LANGUAGE, locale.toLanguageTag());
 			}
 		}
 
 		if (isAcceptGzipEncoding()) {
+			// 加入 Accept-Encoding 属性
 			httpPost.addHeader(HTTP_HEADER_ACCEPT_ENCODING, ENCODING_GZIP);
 		}
 
@@ -239,8 +253,9 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	 * {@link HttpClient} should be used.
 	 * <p>The default implementation tries to merge the defaults of the client with the
 	 * local customizations of the instance, if any.
+	 *
 	 * @param config the HTTP invoker configuration that specifies the
-	 * target service
+	 *               target service
 	 * @return the RequestConfig to use
 	 */
 	@Nullable
@@ -279,10 +294,11 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	 * <p>The default implementation simply sets the serialized invocation as the
 	 * HttpPost's request body. This can be overridden, for example, to write a
 	 * specific encoding and to potentially set appropriate HTTP request headers.
-	 * @param config the HTTP invoker configuration that specifies the target service
+	 *
+	 * @param config   the HTTP invoker configuration that specifies the target service
 	 * @param httpPost the HttpPost to set the request body on
-	 * @param baos the ByteArrayOutputStream that contains the serialized
-	 * RemoteInvocation object
+	 * @param baos     the ByteArrayOutputStream that contains the serialized
+	 *                 RemoteInvocation object
 	 * @throws java.io.IOException if thrown by I/O methods
 	 */
 	protected void setRequestBody(
@@ -290,15 +306,17 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 			throws IOException {
 
 		ByteArrayEntity entity = new ByteArrayEntity(baos.toByteArray());
+		// 将 序列化流 加入到 postMethod 中并声明 ContentType 类型为 application/x-java-serialized-object
 		entity.setContentType(getContentType());
 		httpPost.setEntity(entity);
 	}
 
 	/**
 	 * Execute the given HttpPost instance.
-	 * @param config the HTTP invoker configuration that specifies the target service
+	 *
+	 * @param config     the HTTP invoker configuration that specifies the target service
 	 * @param httpClient the HttpClient to execute on
-	 * @param httpPost the HttpPost to execute
+	 * @param httpPost   the HttpPost to execute
 	 * @return the resulting HttpResponse
 	 * @throws java.io.IOException if thrown by I/O methods
 	 */
@@ -314,7 +332,8 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	 * throwing an exception if it does not correspond to a successful HTTP response.
 	 * <p>Default implementation rejects any HTTP status code beyond 2xx, to avoid
 	 * parsing the response body and trying to deserialize from a corrupted stream.
-	 * @param config the HTTP invoker configuration that specifies the target service
+	 *
+	 * @param config   the HTTP invoker configuration that specifies the target service
 	 * @param response the resulting HttpResponse to validate
 	 * @throws java.io.IOException if validation failed
 	 */
@@ -325,7 +344,7 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 		if (status.getStatusCode() >= 300) {
 			throw new NoHttpResponseException(
 					"Did not receive successful HTTP response: status code = " + status.getStatusCode() +
-					", status message = [" + status.getReasonPhrase() + "]");
+							", status message = [" + status.getReasonPhrase() + "]");
 		}
 	}
 
@@ -334,7 +353,8 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	 * <p>The default implementation simply fetches the HttpPost's response body stream.
 	 * If the response is recognized as GZIP response, the InputStream will get wrapped
 	 * in a GZIPInputStream.
-	 * @param config the HTTP invoker configuration that specifies the target service
+	 *
+	 * @param config       the HTTP invoker configuration that specifies the target service
 	 * @param httpResponse the resulting HttpResponse to read the response body from
 	 * @return an InputStream for the response body
 	 * @throws java.io.IOException if thrown by I/O methods
@@ -344,10 +364,11 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	protected InputStream getResponseBody(HttpInvokerClientConfiguration config, HttpResponse httpResponse)
 			throws IOException {
 
+		// 经过压缩的 输入流
 		if (isGzipResponse(httpResponse)) {
 			return new GZIPInputStream(httpResponse.getEntity().getContent());
-		}
-		else {
+		} else {
+			// 普通的输入流
 			return httpResponse.getEntity().getContent();
 		}
 	}
@@ -356,6 +377,7 @@ public class HttpComponentsHttpInvokerRequestExecutor extends AbstractHttpInvoke
 	 * Determine whether the given response indicates a GZIP response.
 	 * <p>The default implementation checks whether the HTTP "Content-Encoding"
 	 * header contains "gzip" (in any casing).
+	 *
 	 * @param httpResponse the resulting HttpResponse to check
 	 * @return whether the given response indicates a GZIP response
 	 */

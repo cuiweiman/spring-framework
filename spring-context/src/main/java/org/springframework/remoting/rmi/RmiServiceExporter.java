@@ -35,6 +35,13 @@ import org.springframework.remoting.support.RemoteInvocation;
 /**
  * RMI——服务端 服务暴露 的 实现。
  * RMI 客户端实现 参见{@link RmiProxyFactoryBean}
+ * 使用实例：{@link https://github.com/cuiweiman/wang-wen-jun#com.wang.think.rmi}
+ * <p>
+ * （RMI 远程方法调用服务 对于防火墙的穿透比较难配置。服务注册端口默认是 1099 固定的，除此之外 RMI 还需要通讯端口，是随机的。
+ * 因此，而固定通讯端口比较麻烦。因此，Spring 的 HttpInvoker 应运而生。HttpInvoker 是一种基于 Http 协议的远程调用模式。
+ * 服务端实现入口：{@link org.springframework.remoting.httpinvoker.HttpInvokerServiceExporter}
+ * 使用实例：{@link https://github.com/cuiweiman/wang-wen-jun#com.wang.think.httpinvoker}好吧，这个实例没写出来，
+ * 并且SpringBoot2.4.2开始弃用了，因为反序列化可能出现问题。所以这里就只看看源码，不实现 Demo 了。）
  * <p>
  * RMI 服务暴露器，使用指定的 服务名称和端口，将指定的服务暴露出去。
  * 这些被暴露出来的服务可以通过普通的 RMI 或 {@link RmiProxyFactoryBean} 访问到。

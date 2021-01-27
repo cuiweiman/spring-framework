@@ -111,7 +111,9 @@ public abstract class RemoteInvocationBasedExporter extends RemoteExporter {
 	 */
 	protected RemoteInvocationResult invokeAndCreateResult(RemoteInvocation invocation, Object targetObject) {
 		try {
+			// 执行 代理类 对应的 invocation 中的方法
 			Object value = invoke(invocation, targetObject);
+			// 封装结果 以便于 序列化
 			return new RemoteInvocationResult(value);
 		} catch (Throwable ex) {
 			return new RemoteInvocationResult(ex);

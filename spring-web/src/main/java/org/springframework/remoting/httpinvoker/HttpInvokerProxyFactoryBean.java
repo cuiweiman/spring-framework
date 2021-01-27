@@ -22,6 +22,9 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
+ * Http Invoker 客户端的实现
+ * (Http Invoker 服务端的实现{@link HttpInvokerServiceExporter})
+ * <p>
  * {@link FactoryBean} for HTTP invoker proxies. Exposes the proxied service
  * for use as a bean reference, using the specified service interface.
  *
@@ -45,7 +48,6 @@ import org.springframework.util.Assert;
  * In general, we strongly recommend any other message format (e.g. JSON) instead.
  *
  * @author Juergen Hoeller
- * @since 1.1
  * @see #setServiceInterface
  * @see #setServiceUrl
  * @see #setCodebaseUrl
@@ -53,6 +55,10 @@ import org.springframework.util.Assert;
  * @see HttpInvokerServiceExporter
  * @see org.springframework.remoting.rmi.RmiProxyFactoryBean
  * @see org.springframework.remoting.caucho.HessianProxyFactoryBean
+ * @see #afterPropertiesSet() 自定义初始化方法：创建代理，并使用当前类作为拦截器
+ * @see #getObject() 由于实现了 FactoryBean 接口，在获取 bean 实例时，会通过此方法 返回 bean 实例。
+ * @see HttpInvokerClientInterceptor#invoke(org.aopalliance.intercept.MethodInvocation) 执行方法
+ * @since 1.1
  */
 public class HttpInvokerProxyFactoryBean extends HttpInvokerClientInterceptor implements FactoryBean<Object> {
 
@@ -65,6 +71,7 @@ public class HttpInvokerProxyFactoryBean extends HttpInvokerClientInterceptor im
 		super.afterPropertiesSet();
 		Class<?> ifc = getServiceInterface();
 		Assert.notNull(ifc, "Property 'serviceInterface' is required");
+		// 创建代理（封装了配置的服务接口），并使用当前类（即HttpInvokerProxyFactoryBean）作为增强
 		this.serviceProxy = new ProxyFactory(ifc, this).getProxy(getBeanClassLoader());
 	}
 
@@ -72,6 +79,7 @@ public class HttpInvokerProxyFactoryBean extends HttpInvokerClientInterceptor im
 	@Override
 	@Nullable
 	public Object getObject() {
+		// 返回的不是本类实例本身，而是 自定义的初始化过程中 创建的代理
 		return this.serviceProxy;
 	}
 
